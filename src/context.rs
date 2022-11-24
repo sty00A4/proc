@@ -45,4 +45,7 @@ impl Context {
     pub fn def(&mut self, id: &String, v: &V) -> Option<V> {
         self.global.set(id, v)
     }
+    pub fn trace(&mut self, pos: Position, path: &String) {
+        self.trace.push((pos, path.clone()));
+    }
 }
