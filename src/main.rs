@@ -5,22 +5,24 @@ mod errors;
 mod value;
 mod context;
 mod lexer;
+mod parser;
 use position::*;
 use errors::*;
 use value::*;
 use context::*;
 use lexer::*;
+use parser::*;
 
 fn runfile_context(path: &String, text: &String) -> Result<V, E> {
     let mut context = Context::new();
     let tokens = lex(path, text, &mut context)?;
-    for (ln, line) in tokens.iter().enumerate() {
-        print!("{ln} ");
-        for token in line.iter() {
-            print!("{token:?}\t");
-        }
-        println!();
-    }
+    // for (ln, line) in tokens.iter().enumerate() {
+    //     print!("{ln} ");
+    //     for token in line.iter() { print!("{token:?}\t"); }
+    //     println!();
+    // }
+    let ast = parse(path, tokens, &mut context)?;
+    println!("{ast}");
     Ok(V::Null)
 }
 
