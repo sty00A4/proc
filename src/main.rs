@@ -39,3 +39,27 @@ fn main() {
         None => return,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashSet;
+
+    use crate::position::*;
+    use crate::errors::*;
+    use crate::value::*;
+    use crate::context::*;
+    use crate::lexer::*;
+
+    #[test]
+    fn type_checking() {
+        assert!(Type::Any == Type::Any);
+        assert!(Type::Undefiend == Type::Undefiend);
+        assert!(Type::Union(vec![Type::Int, Type::Float]) == Type::Union(vec![Type::Int, Type::Float]));
+        assert!(Type::Union(vec![Type::Int, Type::Float]) != Type::Union(vec![Type::Int, Type::Bool]));
+        assert!(Type::Union(vec![Type::Int, Type::Float, Type::Bool]) != Type::Scission(vec![Type::Int, Type::Float]));
+        assert!(Type::Scission(vec![Type::Int, Type::Float]) == Type::Scission(vec![Type::Int, Type::Float]));
+        assert!(Type::Int == Type::Scission(vec![Type::String]));
+        assert!(Type::Int != Type::Scission(vec![Type::Int, Type::Float]));
+        assert!(Type::Scission(vec![Type::Int, Type::Float]) != Type::Int);
+    }
+}
