@@ -15,9 +15,20 @@ pub enum T {
     EOF, EOL, Indent(u16),
     Rule, Container, Proc, If, Else, While,
     Var, Global,
-//  !     =       :    <-  ->
-    Call, Assign, Rep, In, Out,
-
+//  !     =       :    <-  ->   #    ?     |       .      ..     ,
+    Call, Assign, Rep, In, Out, Len, Safe, Option, Field, Range, Sep,
+//  (       )        [         ]          {         }
+    EvalIn, EvalOut, VectorIn, VectorOut, ObjectIn, ObjectOut,
+//  +    -    *    /    %    ==  !=  <   >   <=  >=
+    Add, Sub, Mul, Div, Mod, EQ, NE, LT, GT, LE, GE,
+//  +=         -=         *=          /=         %=
+    AddAssign, SubAssign, MulAsssign, DivAssign, ModAssign,
+//  ++   --
+    Inc, Dec,
+//      in
+    Is, Contains, And, Or, Xor,
+//  _
+    Wildcard, Null,
     Int(i64), Float(f64), Bool(bool), String(String),
     ID(String)
 }
@@ -62,8 +73,166 @@ pub fn lex(path: &String, text: &String, context: &mut Context) -> Result<Vec<Ve
                     tokens[ln].push(Token(T::String(s), Position::new(ln..ln+1, start..col+1)));
                 }
                 "!" => {
-                    tokens[ln].push(Token(T::Call, Position::new(ln..ln+1, col..col+1)));
+                    let start = col;
                     col += 1;
+                    if &line[col..col+1] == "=" {
+                        col += 1;
+                        tokens[ln].push(Token(T::NE, Position::new(ln..ln+1, start..col)));
+                    }
+                    tokens[ln].push(Token(T::Call, Position::new(ln..ln+1, start..col)));
+                }
+                "=" => {
+                    let start = col;
+                    col += 1;
+                    if &line[col..col+1] == "=" {
+                        col += 1;
+                        tokens[ln].push(Token(T::EQ, Position::new(ln..ln+1, start..col)));
+                    }
+                    tokens[ln].push(Token(T::Assign, Position::new(ln..ln+1, start..col)));
+                }
+                ":" => {
+                    let start = col;
+                    col += 1;
+                    tokens[ln].push(Token(T::Rep, Position::new(ln..ln+1, start..col)));
+                }
+                "<" => {
+                    let start = col;
+                    col += 1;
+                    if &line[col..col+1] == "-" {
+                        col += 1;
+                        tokens[ln].push(Token(T::In, Position::new(ln..ln+1, start..col)));
+                    }
+                    if &line[col..col+1] == "=" {
+                        col += 1;
+                        tokens[ln].push(Token(T::LE, Position::new(ln..ln+1, start..col)));
+                    }
+                    tokens[ln].push(Token(T::LT, Position::new(ln..ln+1, start..col)));
+                }
+                ">" => {
+                    let start = col;
+                    col += 1;
+                    if &line[col..col+1] == "=" {
+                        col += 1;
+                        tokens[ln].push(Token(T::GE, Position::new(ln..ln+1, start..col)));
+                    }
+                    tokens[ln].push(Token(T::GT, Position::new(ln..ln+1, start..col)));
+                }
+                "#" => {
+                    let start = col;
+                    col += 1;
+                    tokens[ln].push(Token(T::Len, Position::new(ln..ln+1, start..col)));
+                }
+                "?" => {
+                    let start = col;
+                    col += 1;
+                    tokens[ln].push(Token(T::Safe, Position::new(ln..ln+1, start..col)));
+                }
+                "|" => {
+                    let start = col;
+                    col += 1;
+                    tokens[ln].push(Token(T::Option, Position::new(ln..ln+1, start..col)));
+                }
+                "." => {
+                    let start = col;
+                    col += 1;
+                    if &line[col..col+1] == "." {
+                        col += 1;
+                        tokens[ln].push(Token(T::Range, Position::new(ln..ln+1, start..col)));
+                    }
+                    tokens[ln].push(Token(T::Field, Position::new(ln..ln+1, start..col)));
+                }
+                "," => {
+                    let start = col;
+                    col += 1;
+                    tokens[ln].push(Token(T::Sep, Position::new(ln..ln+1, start..col)));
+                }
+                "(" => {
+                    let start = col;
+                    col += 1;
+                    tokens[ln].push(Token(T::EvalIn, Position::new(ln..ln+1, start..col)));
+                }
+                ")" => {
+                    let start = col;
+                    col += 1;
+                    tokens[ln].push(Token(T::EvalOut, Position::new(ln..ln+1, start..col)));
+                }
+                "[" => {
+                    let start = col;
+                    col += 1;
+                    tokens[ln].push(Token(T::VectorIn, Position::new(ln..ln+1, start..col)));
+                }
+                "]" => {
+                    let start = col;
+                    col += 1;
+                    tokens[ln].push(Token(T::VectorOut, Position::new(ln..ln+1, start..col)));
+                }
+                "{" => {
+                    let start = col;
+                    col += 1;
+                    tokens[ln].push(Token(T::ObjectIn, Position::new(ln..ln+1, start..col)));
+                }
+                "}" => {
+                    let start = col;
+                    col += 1;
+                    tokens[ln].push(Token(T::ObjectOut, Position::new(ln..ln+1, start..col)));
+                }
+                "+" => {
+                    let start = col;
+                    col += 1;
+                    if &line[col..col+1] == "+" {
+                        col += 1;
+                        tokens[ln].push(Token(T::Inc, Position::new(ln..ln+1, start..col)));
+                    }
+                    if &line[col..col+1] == "=" {
+                        col += 1;
+                        tokens[ln].push(Token(T::AddAssign, Position::new(ln..ln+1, start..col)));
+                    }
+                    tokens[ln].push(Token(T::Add, Position::new(ln..ln+1, start..col)));
+                }
+                "-" => {
+                    let start = col;
+                    col += 1;
+                    if &line[col..col+1] == "-" {
+                        col += 1;
+                        tokens[ln].push(Token(T::Dec, Position::new(ln..ln+1, start..col)));
+                    }
+                    if &line[col..col+1] == "=" {
+                        col += 1;
+                        tokens[ln].push(Token(T::SubAssign, Position::new(ln..ln+1, start..col)));
+                    }
+                    tokens[ln].push(Token(T::Sub, Position::new(ln..ln+1, start..col)));
+                }
+                "*" => {
+                    let start = col;
+                    col += 1;
+                    if &line[col..col+1] == "=" {
+                        col += 1;
+                        tokens[ln].push(Token(T::MulAsssign, Position::new(ln..ln+1, start..col)));
+                    }
+                    tokens[ln].push(Token(T::Mul, Position::new(ln..ln+1, start..col)));
+                }
+                "/" => {
+                    let start = col;
+                    col += 1;
+                    if &line[col..col+1] == "/" {
+                        col += 1;
+                        while col < line.len() { col += 1 }
+                        continue
+                    }
+                    if &line[col..col+1] == "=" {
+                        col += 1;
+                        tokens[ln].push(Token(T::DivAssign, Position::new(ln..ln+1, start..col)));
+                    }
+                    tokens[ln].push(Token(T::Div, Position::new(ln..ln+1, start..col)));
+                }
+                "%" => {
+                    let start = col;
+                    col += 1;
+                    if &line[col..col+1] == "=" {
+                        col += 1;
+                        tokens[ln].push(Token(T::ModAssign, Position::new(ln..ln+1, start..col)));
+                    }
+                    tokens[ln].push(Token(T::Mod, Position::new(ln..ln+1, start..col)));
                 }
                 _ => {
                     // id
@@ -76,6 +245,10 @@ pub fn lex(path: &String, text: &String, context: &mut Context) -> Result<Vec<Ve
                             col += 1;
                         }
                         tokens[ln].push(Token((|| match id.as_str() {
+                            "_" => T::Wildcard,
+                            "null" => T::Null,
+                            "true" => T::Bool(true),
+                            "false" => T::Bool(false),
                             "rule" => T::Rule,
                             "container" => T::Container,
                             "proc" => T::Proc,
@@ -84,6 +257,11 @@ pub fn lex(path: &String, text: &String, context: &mut Context) -> Result<Vec<Ve
                             "while" => T::While,
                             "var" => T::Var,
                             "global" => T::Global,
+                            "is" => T::Is,
+                            "in" => T::Contains,
+                            "or" => T::Or,
+                            "and" => T::And,
+                            "xor" => T::Xor,
                             _ => T::ID(id)
                         })(), Position::new(ln..ln+1, start..col)));
                         continue
