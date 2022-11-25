@@ -12,10 +12,11 @@ static LETTERS: [&str; 53] = [
 
 #[derive(Debug, Clone)]
 pub enum T {
-    EOF, EOL,
+    EOF, EOL, Indent(u16),
     Rule, Container, Proc, If, Else, While,
-    Var, Global, Assign, Rep,
-    Call,
+    Var, Global,
+//  !     =       :    <-  ->
+    Call, Assign, Rep, In, Out,
 
     Int(i64), Float(f64), Bool(bool), String(String),
     ID(String)
@@ -33,6 +34,17 @@ pub fn lex(path: &String, text: &String, context: &mut Context) -> Result<Vec<Ve
     for (ln, line) in text.split("\n").enumerate() {
         tokens.push(vec![]);
         let mut col: usize = 0;
+        if [" ", "\t"].contains(&&line[col..col+1]) {
+            let start = col;
+            let mut indent: u16 = 0;
+            while col < line.len() && [" ", "\t"].contains(&&line[col..col+1]) {
+                indent += if &line[col..col+1] == "\t" { 4 } else { 1 };
+                col += 1;
+            }
+            if col < line.len() {
+                tokens[ln].push(Token(T::Indent(indent), Position::new(ln..ln+1, start..col+1)));
+            }
+        }
         while col < line.len() {
             match &line[col..col+1] {
                 // white space
