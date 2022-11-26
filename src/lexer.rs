@@ -10,7 +10,7 @@ static LETTERS: [&str; 53] = [
     "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "_"
 ];
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum T {
     EOF, EOL, Indent(u16),
     Rule, Container, Proc, If, Else, While,
@@ -32,8 +32,72 @@ pub enum T {
     Int(i64), Float(f64), Bool(bool), String(String),
     ID(String)
 }
+impl T {
+    pub fn name(&self) -> &str {
+        match self {
+            Self::EOF => "end of file",
+            Self::EOL => "end of line",
+            Self::Indent(_) => "indention",
+            Self::Rule => "'rule'",
+            Self::Container => "'container'",
+            Self::Proc => "'proc'",
+            Self::If => "'if'",
+            Self::Else => "'else'",
+            Self::While => "'while'",
+            Self::Var => "'var'",
+            Self::Global => "'global'",
+            Self::Call => "'!'",
+            Self::Assign => "'='",
+            Self::Rep => "':'",
+            Self::In => "'<-'",
+            Self::Out => "'->'",
+            Self::Len => "'#'",
+            Self::Safe => "'?'",
+            Self::Option => "'|'",
+            Self::Field => "'.'",
+            Self::Range => "'..'",
+            Self::Sep => "','",
+            Self::EvalIn => "'('",
+            Self::EvalOut => "')'",
+            Self::VectorIn => "'['",
+            Self::VectorOut => "']'",
+            Self::ObjectIn => "'{'",
+            Self::ObjectOut => "'}'",
+            Self::Add => "'+'",
+            Self::Sub => "'-'",
+            Self::Mul => "'*'",
+            Self::Div => "'/'",
+            Self::Mod => "'%'",
+            Self::EQ => "'=='",
+            Self::NE => "'!='",
+            Self::LT => "'<'",
+            Self::GT => "'>'",
+            Self::LE => "'<='",
+            Self::GE => "'>='",
+            Self::AddAssign => "'+='",
+            Self::SubAssign => "'-='",
+            Self::MulAsssign => "'*='",
+            Self::DivAssign => "'/='",
+            Self::ModAssign => "'%='",
+            Self::Inc => "'++'",
+            Self::Dec => "'--'",
+            Self::Is => "'is'",
+            Self::Contains => "'in'",
+            Self::And => "'and'",
+            Self::Or => "'or'",
+            Self::Xor => "'xor'",
+            Self::Wildcard => "wildcard",
+            Self::Null => "null",
+            Self::Int(_) => "int",
+            Self::Float(_) => "float",
+            Self::Bool(_) => "bool",
+            Self::String(_) => "str",
+            Self::ID(_) => "id",
+        }
+    }
+}
 #[derive(Clone)]
-pub struct Token(T, Position);
+pub struct Token(pub T, pub Position);
 impl std::fmt::Debug for Token {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}", self.0)

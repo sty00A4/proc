@@ -6,6 +6,7 @@ use crate::lexer::*;
 
 #[derive(Debug, Clone)]
 pub enum N {
+    Body(Vec<Node>),
     Wildcard, Null, Int(i64), Float(f64), Bool(bool), String(String), Vector(Vec<Node>),
     Object(HashMap<Node, Node>), ID(String),
     Binary { op: Token, left: Box<Node>, right: Box<Node> },
@@ -17,6 +18,7 @@ pub enum N {
 impl std::fmt::Display for N {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Self::Body(nodes) => write!(f, "\n{}\n", nodes.iter().map(|x| x.to_string()).collect::<Vec<String>>().join("\n")),
             Self::Wildcard => write!(f, "_"),
             Self::Null => write!(f, "null"),
             Self::Int(v) => write!(f, "{v:?}"),
@@ -29,7 +31,7 @@ impl std::fmt::Display for N {
             Self::Binary { op, left, right } => write!(f, "{left} {op:?} {right}"),
             Self::Unary { op, node } => write!(f, "{op:?} {node}"),
             Self::Multi { op, nodes } => write!(f, "{op:?} {}", nodes.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(" ")),
-            Self::Assign { global, id, expr } => if *global { write!(f, "global {id} = {expr}") } else { write!(f, "{id} = {expr}") }
+            Self::Assign { global, id, expr } => if *global { write!(f, "global {id} = {expr}") } else { write!(f, "var {id} = {expr}") }
             Self::OpAssign { op, id, expr } => write!(f, "{id} {op:?} {expr}"),
             Self::Inc(id) => write!(f, "{id}++"),
             Self::Dec(id) => write!(f, "{id}--"),
@@ -54,8 +56,79 @@ impl Parser {
     pub fn new(path: &String, tokens: Vec<Vec<Token>>) -> Self {
         Self { tokens, path: path.clone(), col: 0, ln: 0 }
     }
+    pub fn token(&self) -> &T {
+        match self.tokens.get(self.ln) {
+            Some(line) => match line.get(self.col) {
+                Some(token) => &token.0,
+                None => &line.last().unwrap().0
+            }
+            None => &self.tokens.last().unwrap().last().unwrap().0
+        }
+    }
+    pub fn pos(&self) -> &Position {
+        match self.tokens.get(self.ln) {
+            Some(line) => match line.get(self.col) {
+                Some(token) => &token.1,
+                None => &line.last().unwrap().1
+            }
+            None => &self.tokens.last().unwrap().last().unwrap().1
+        }
+    }
+    pub fn advance(&mut self) { self.col += 1; }
+    pub fn advance_ln(&mut self) { self.ln += 1; self.col = 0; }
+    pub fn advance_expect(&mut self, token: T, context: &mut Context) -> Result<(), E> {
+        if self.token() != &token {
+            context.trace(self.pos().clone(), &self.path);
+            return Err(E::ExpectedToken(token, self.token().clone()))
+        }
+        self.advance();
+        Ok(())
+    }
     pub fn parse(&mut self, context: &mut Context) -> Result<Node, E> {
-        Ok(Node(N::Null, Position::new(0..1, 0..1)))
+        let mut nodes: Vec<Node> = vec![];
+        while self.token() != &T::EOF {
+            let node = self.stat(context)?;
+            nodes.push(node);
+        }
+        Ok(Node(N::Body(nodes), Position::new(0..self.ln, 0..self.col)))
+    }
+    pub fn stat(&mut self, context: &mut Context) -> Result<Node, E> {
+        let start = self.col;
+        match self.token() {
+            T::Var | T::Global => {
+                self.advance();
+                let id = self.atom(context)?; // field
+                self.advance_expect(T::Assign, context)?;
+                let expr = self.expr(context)?;
+                self.advance_ln();
+                return Ok(Node(N::Assign {
+                    global: self.token() == &T::Global, id: Box::new(id), expr: Box::new(expr)
+                }, Position::new(self.ln..self.ln+1, start..self.col)))
+            }
+            _ => {}
+        }
+        context.trace(self.pos().clone(), &self.path);
+        Err(E::UnexpectedToken(self.token().clone()))
+    }
+    pub fn expr(&mut self, context: &mut Context) -> Result<Node, E> {
+        self.atom(context)
+    }
+    pub fn atom(&mut self, context: &mut Context) -> Result<Node, E> {
+        let ret: Result<Node, E> = match self.token() {
+            T::Wildcard => Ok(Node(N::Wildcard, self.pos().clone())),
+            T::Null => Ok(Node(N::Null, self.pos().clone())),
+            T::Int(v) => Ok(Node(N::Int(v.clone()), self.pos().clone())),
+            T::Float(v) => Ok(Node(N::Float(v.clone()), self.pos().clone())),
+            T::Bool(v) => Ok(Node(N::Bool(v.clone()), self.pos().clone())),
+            T::String(v) => Ok(Node(N::String(v.clone()), self.pos().clone())),
+            T::ID(id) => Ok(Node(N::ID(id.clone()), self.pos().clone())),
+            _ => {
+                context.trace(self.pos().clone(), &self.path);
+                Err(E::UnexpectedToken(self.token().clone()))
+            }
+        };
+        self.advance();
+        ret
     }
 }
 
