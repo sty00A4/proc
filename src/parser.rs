@@ -96,13 +96,14 @@ impl Parser {
         let start = self.col;
         match self.token() {
             T::Var | T::Global => {
+                let prefix = self.token().clone();
                 self.advance();
                 let id = self.atom(context)?; // field
                 self.advance_expect(T::Assign, context)?;
                 let expr = self.expr(context)?;
                 self.advance_ln();
                 return Ok(Node(N::Assign {
-                    global: self.token() == &T::Global, id: Box::new(id), expr: Box::new(expr)
+                    global: prefix == T::Global, id: Box::new(id), expr: Box::new(expr)
                 }, Position::new(self.ln..self.ln+1, start..self.col)))
             }
             _ => {}
