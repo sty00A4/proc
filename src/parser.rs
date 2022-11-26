@@ -14,6 +14,7 @@ pub enum N {
     Assign { global: bool, id: Box<Node>, expr: Box<Node> },
     OpAssign { op: Token, id: Box<Node>, expr: Box<Node> },
     Inc(Box<Node>), Dec(Box<Node>),
+    Call { id: Box<Node>, args: Vec<Node> }
 }
 impl std::fmt::Display for N {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -35,6 +36,7 @@ impl std::fmt::Display for N {
             Self::OpAssign { op, id, expr } => write!(f, "{id} {op:?} {expr}"),
             Self::Inc(id) => write!(f, "{id}++"),
             Self::Dec(id) => write!(f, "{id}--"),
+            Self::Call { id, args } => write!(f, "{id}! {}", args.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(" ")),
         }
     }
 }
@@ -102,14 +104,28 @@ impl Parser {
                 self.advance_expect(T::Assign, context)?;
                 let expr = self.expr(context)?;
                 self.advance_ln();
-                return Ok(Node(N::Assign {
+                Ok(Node(N::Assign {
                     global: prefix == T::Global, id: Box::new(id), expr: Box::new(expr)
                 }, Position::new(self.ln..self.ln+1, start..self.col)))
             }
-            _ => {}
+            T::ID(_) => {
+                let id = self.atom(context)?; // field
+                self.advance_expect(T::Call, context)?;
+                let mut args: Vec<Node> = vec![];
+                while self.token() != &T::EOL {
+                    let value = self.expr(context)?;
+                    args.push(value);
+                }
+                self.advance_ln();
+                Ok(Node(N::Call {
+                    id: Box::new(id), args
+                }, Position::new(self.ln..self.ln+1, start..self.col)))
+            }
+            _ => {
+                context.trace(self.pos().clone(), &self.path);
+                Err(E::UnexpectedToken(self.token().clone()))
+            }
         }
-        context.trace(self.pos().clone(), &self.path);
-        Err(E::UnexpectedToken(self.token().clone()))
     }
     pub fn expr(&mut self, context: &mut Context) -> Result<Node, E> {
         self.atom(context)
