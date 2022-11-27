@@ -9,10 +9,10 @@ pub enum N {
     Body(Vec<Node>),
     Wildcard, Null, Int(i64), Float(f64), Bool(bool), String(String), Vector(Vec<Node>),
     Object(HashMap<Node, Node>), ID(String),
-    Binary { op: Token, left: Box<Node>, right: Box<Node> },
-    Unary { op: Token, node: Box<Node> }, Multi { op: Token, nodes: Vec<Node> },
+    Binary { op: T, left: Box<Node>, right: Box<Node> },
+    Unary { op: T, node: Box<Node> }, Multi { op: T, nodes: Vec<Node> },
     Assign { global: bool, id: Box<Node>, expr: Box<Node> },
-    OpAssign { op: Token, id: Box<Node>, expr: Box<Node> },
+    OpAssign { op: T, id: Box<Node>, expr: Box<Node> },
     Inc(Box<Node>), Dec(Box<Node>),
     Call { id: Box<Node>, args: Vec<Node> }
 }
@@ -46,6 +46,12 @@ impl std::fmt::Display for Node {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "({})", self.0)
     }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Layer {
+    Binary(Vec<T>), UnaryLeft(Vec<T>), UnaryRight(Vec<T>),
+    Atom
 }
 
 pub struct Parser {
@@ -85,6 +91,59 @@ impl Parser {
         }
         self.advance();
         Ok(())
+    }
+    pub fn ops(&self, layer: usize) -> Layer {
+        let layers = [
+            Layer::Binary(vec![T::And, T::Or, T::Xor]),
+            Layer::Binary(vec![T::EQ, T::NE, T::LT, T::LE, T::GT, T::GE]),
+            Layer::Binary(vec![T::Add, T::Sub]),
+            Layer::Binary(vec![T::Mul, T::Div, T::Mod]),
+            Layer::UnaryLeft(vec![T::Add, T::Sub]),
+            Layer::UnaryLeft(vec![T::Len]),
+        ];
+        layers.get(layer).or_else(|| Some(&Layer::Atom)).unwrap().clone()
+    }
+    pub fn operation(&mut self, layer_type: Layer, layer: usize, context: &mut Context) -> Result<Node, E> {
+        match layer_type {
+            Layer::Binary(ops) => {
+                let start = self.col;
+                let mut left = self.operation(self.ops(layer + 1), layer + 1, context)?;
+                while ops.contains(&self.token()) {
+                    let op = self.token().clone();
+                    self.advance();
+                    let right = self.operation(self.ops(layer + 1), layer + 1, context)?;
+                    left = Node(N::Binary{
+                        op, left: Box::new(left.clone()), right: Box::new(right)
+                    }, Position::new(self.ln..self.ln+1, start..self.col))
+                }
+                Ok(left)
+            }
+            Layer::UnaryLeft(ops) => {
+                let start = self.col;
+                if ops.contains(&self.token()) {
+                    let op = self.token().clone();
+                    self.advance();
+                    let node = self.operation(self.ops(layer), layer, context)?;
+                    return Ok(Node(N::Unary{
+                        op, node: Box::new(node)
+                    }, Position::new(self.ln..self.ln+1, start..self.col)))
+                }
+                self.operation(self.ops(layer + 1), layer + 1, context)
+            }
+            Layer::UnaryRight(ops) => {
+                let start = self.col;
+                let mut node = self.operation(self.ops(layer), layer, context)?;
+                while ops.contains(&self.token()) {
+                    let op = self.token().clone();
+                    self.advance();
+                    node = Node(N::Unary{
+                        op, node: Box::new(node.clone())
+                    }, Position::new(self.ln..self.ln+1, start..self.col));
+                }
+                Ok(node)
+            }
+            Layer::Atom => self.atom(context)
+        }
     }
     pub fn parse(&mut self, context: &mut Context) -> Result<Node, E> {
         let mut nodes: Vec<Node> = vec![];
@@ -128,7 +187,7 @@ impl Parser {
         }
     }
     pub fn expr(&mut self, context: &mut Context) -> Result<Node, E> {
-        self.atom(context)
+        self.operation(self.ops(0), 0, context)
     }
     pub fn atom(&mut self, context: &mut Context) -> Result<Node, E> {
         let ret: Result<Node, E> = match self.token() {
