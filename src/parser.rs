@@ -72,6 +72,7 @@ impl Parser {
                 Layer::Binary(vec![T::Mul, T::Div, T::Mod]),
                 Layer::UnaryLeft(vec![T::Add, T::Sub]),
                 Layer::UnaryLeft(vec![T::Len]),
+                Layer::UnaryRight(vec![T::Safe]),
                 Layer::Binary(vec![T::Field]),
             ]
         }
@@ -147,7 +148,7 @@ impl Parser {
             }
             Layer::UnaryRight(ops) => {
                 let start = self.col;
-                let mut node = self.operation(self.ops(layer), layer, context)?;
+                let mut node = self.operation(self.ops(layer + 1), layer + 1, context)?;
                 while ops.contains(&self.token()) {
                     let op = self.token().clone();
                     self.advance();
