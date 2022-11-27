@@ -355,6 +355,7 @@ pub fn lex(path: &String, text: &String, context: &mut Context) -> Result<Vec<Ve
                         })(), Position::new(ln..ln+1, start..col)));
                         continue
                     }
+                    // number
                     if DIGITS.contains(&&line[col..col+1]) {
                         let start = col;
                         let mut number = String::new();
