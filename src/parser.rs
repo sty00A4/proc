@@ -52,6 +52,35 @@ impl std::fmt::Display for Node {
         write!(f, "({})", self.0)
     }
 }
+impl Node {
+    pub fn display(&self, indent: usize) -> String {
+        let s = String::from("   ").repeat(indent);
+        match &self.0 {
+            N::Body(nodes) => format!("{}", nodes.iter().map(|x| format!("{}", x.display(indent))).collect::<Vec<String>>().join("\n")),
+            N::Wildcard => format!("_"),
+            N::Null => format!("null"),
+            N::Int(v) => format!("{v:?}"),
+            N::Float(v) => format!("{v:?}"),
+            N::Bool(v) => format!("{v:?}"),
+            N::String(v) => format!("{v:?}"),
+            N::Vector(v) => format!("[{}]", v.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(", ")),
+            N::Object(v) => format!("{{ {} }}", v.iter().map(|(k, v)| format!("{k} = {v}")).collect::<Vec<String>>().join(", ")),
+            N::ID(v) => format!("{v}"),
+            N::Binary { op, left, right } => format!("{left} {op} {right}"),
+            N::Unary { op, node } => format!("{op} {node}"),
+            N::Multi { op, nodes } => format!("{op} {}", nodes.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(" ")),
+            N::Assign { global, id, expr } => if *global { format!("{s}global {id} = {expr}") } else { format!("{s}var {id} = {expr}") }
+            N::OpAssign { op, id, expr } => format!("{s}{id} {op} {expr}"),
+            N::Inc(id) => format!("{s}{id}++"),
+            N::Dec(id) => format!("{s}{id}--"),
+            N::Call { id, args } => format!("{s}{id}! {}", args.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(" ")),
+            N::If { cond, body, else_body } => match else_body {
+                Some(else_body) => format!("{s}if {cond} \n{}\n{s}else\n{}", body.display(indent + 1), else_body.display(indent + 1)),
+                None => format!("if {cond} \n{}\n", body.display(indent + 1))
+            },
+        }
+    }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Layer {

@@ -22,7 +22,7 @@ fn runfile_context(path: &String, text: &String) -> Result<V, E> {
     //     println!();
     // }
     let ast = parse(path, tokens, &mut context)?;
-    println!("{ast}");
+    println!("{}", ast.display(0));
     Ok(V::Null)
 }
 
