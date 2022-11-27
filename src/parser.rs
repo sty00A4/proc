@@ -100,6 +100,7 @@ impl Parser {
             Layer::Binary(vec![T::Mul, T::Div, T::Mod]),
             Layer::UnaryLeft(vec![T::Add, T::Sub]),
             Layer::UnaryLeft(vec![T::Len]),
+            Layer::Binary(vec![T::Field]),
         ];
         layers.get(layer).or_else(|| Some(&Layer::Atom)).unwrap().clone()
     }
@@ -115,7 +116,7 @@ impl Parser {
                     let n = match &left.0 {
                         N::Binary { op: op_, left: left_, right: right_ } if &op == op_ => 
                         N::Multi { op, nodes: vec![left_.as_ref().clone(), right_.as_ref().clone(), right] },
-                        
+
                         N::Multi { op: op_, nodes: nodes_ } if &op == op_ => {
                             let mut new_nodes = nodes_.clone();
                             new_nodes.push(right);
@@ -180,6 +181,23 @@ impl Parser {
             }
             T::ID(_) => {
                 let id = self.atom(context)?; // field
+                if [T::AddAssign, T::SubAssign, T::MulAsssign, T::DivAssign, T::ModAssign].contains(&self.token()) {
+                    let op = self.token().clone();
+                    self.advance();
+                    let expr = self.expr(context)?;
+                    self.advance_ln();
+                    return Ok(Node(N::OpAssign {
+                        op, id: Box::new(id), expr: Box::new(expr)
+                    }, Position::new(self.ln..self.ln+1, start..self.col)))
+                }
+                if self.token() == &T::Inc {
+                    self.advance_ln();
+                    return Ok(Node(N::Inc(Box::new(id)), Position::new(self.ln..self.ln+1, start..self.col)))
+                }
+                if self.token() == &T::Dec {
+                    self.advance_ln();
+                    return Ok(Node(N::Dec(Box::new(id)), Position::new(self.ln..self.ln+1, start..self.col)))
+                }
                 self.advance_expect(T::Call, context)?;
                 let mut args: Vec<Node> = vec![];
                 while self.token() != &T::EOL {

@@ -151,6 +151,7 @@ pub fn lex(path: &String, text: &String, context: &mut Context) -> Result<Vec<Ve
                     if &line[col..col+1] == "=" {
                         col += 1;
                         tokens[ln].push(Token(T::NE, Position::new(ln..ln+1, start..col)));
+                        continue
                     }
                     tokens[ln].push(Token(T::Call, Position::new(ln..ln+1, start..col)));
                 }
@@ -160,6 +161,7 @@ pub fn lex(path: &String, text: &String, context: &mut Context) -> Result<Vec<Ve
                     if &line[col..col+1] == "=" {
                         col += 1;
                         tokens[ln].push(Token(T::EQ, Position::new(ln..ln+1, start..col)));
+                        continue
                     }
                     tokens[ln].push(Token(T::Assign, Position::new(ln..ln+1, start..col)));
                 }
@@ -174,10 +176,12 @@ pub fn lex(path: &String, text: &String, context: &mut Context) -> Result<Vec<Ve
                     if &line[col..col+1] == "-" {
                         col += 1;
                         tokens[ln].push(Token(T::In, Position::new(ln..ln+1, start..col)));
+                        continue
                     }
                     if &line[col..col+1] == "=" {
                         col += 1;
                         tokens[ln].push(Token(T::LE, Position::new(ln..ln+1, start..col)));
+                        continue
                     }
                     tokens[ln].push(Token(T::LT, Position::new(ln..ln+1, start..col)));
                 }
@@ -187,6 +191,7 @@ pub fn lex(path: &String, text: &String, context: &mut Context) -> Result<Vec<Ve
                     if &line[col..col+1] == "=" {
                         col += 1;
                         tokens[ln].push(Token(T::GE, Position::new(ln..ln+1, start..col)));
+                        continue
                     }
                     tokens[ln].push(Token(T::GT, Position::new(ln..ln+1, start..col)));
                 }
@@ -211,6 +216,7 @@ pub fn lex(path: &String, text: &String, context: &mut Context) -> Result<Vec<Ve
                     if &line[col..col+1] == "." {
                         col += 1;
                         tokens[ln].push(Token(T::Range, Position::new(ln..ln+1, start..col)));
+                        continue
                     }
                     tokens[ln].push(Token(T::Field, Position::new(ln..ln+1, start..col)));
                 }
@@ -255,10 +261,12 @@ pub fn lex(path: &String, text: &String, context: &mut Context) -> Result<Vec<Ve
                     if &line[col..col+1] == "+" {
                         col += 1;
                         tokens[ln].push(Token(T::Inc, Position::new(ln..ln+1, start..col)));
+                        continue
                     }
                     if &line[col..col+1] == "=" {
                         col += 1;
                         tokens[ln].push(Token(T::AddAssign, Position::new(ln..ln+1, start..col)));
+                        continue
                     }
                     tokens[ln].push(Token(T::Add, Position::new(ln..ln+1, start..col)));
                 }
@@ -268,10 +276,12 @@ pub fn lex(path: &String, text: &String, context: &mut Context) -> Result<Vec<Ve
                     if &line[col..col+1] == "-" {
                         col += 1;
                         tokens[ln].push(Token(T::Dec, Position::new(ln..ln+1, start..col)));
+                        continue
                     }
                     if &line[col..col+1] == "=" {
                         col += 1;
                         tokens[ln].push(Token(T::SubAssign, Position::new(ln..ln+1, start..col)));
+                        continue
                     }
                     tokens[ln].push(Token(T::Sub, Position::new(ln..ln+1, start..col)));
                 }
@@ -281,6 +291,7 @@ pub fn lex(path: &String, text: &String, context: &mut Context) -> Result<Vec<Ve
                     if &line[col..col+1] == "=" {
                         col += 1;
                         tokens[ln].push(Token(T::MulAsssign, Position::new(ln..ln+1, start..col)));
+                        continue
                     }
                     tokens[ln].push(Token(T::Mul, Position::new(ln..ln+1, start..col)));
                 }
@@ -295,6 +306,7 @@ pub fn lex(path: &String, text: &String, context: &mut Context) -> Result<Vec<Ve
                     if &line[col..col+1] == "=" {
                         col += 1;
                         tokens[ln].push(Token(T::DivAssign, Position::new(ln..ln+1, start..col)));
+                        continue
                     }
                     tokens[ln].push(Token(T::Div, Position::new(ln..ln+1, start..col)));
                 }
@@ -304,6 +316,7 @@ pub fn lex(path: &String, text: &String, context: &mut Context) -> Result<Vec<Ve
                     if &line[col..col+1] == "=" {
                         col += 1;
                         tokens[ln].push(Token(T::ModAssign, Position::new(ln..ln+1, start..col)));
+                        continue
                     }
                     tokens[ln].push(Token(T::Mod, Position::new(ln..ln+1, start..col)));
                 }
