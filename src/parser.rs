@@ -14,7 +14,8 @@ pub enum N {
     Assign { global: bool, id: Box<Node>, expr: Box<Node> },
     OpAssign { op: T, id: Box<Node>, expr: Box<Node> },
     Inc(Box<Node>), Dec(Box<Node>),
-    Call { id: Box<Node>, args: Vec<Node> }
+    Call { id: Box<Node>, args: Vec<Node> },
+    If { cond: Box<Node>, body: Box<Node>, else_body: Option<Box<Node>> },
 }
 impl std::fmt::Display for N {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -37,6 +38,10 @@ impl std::fmt::Display for N {
             Self::Inc(id) => write!(f, "{id}++"),
             Self::Dec(id) => write!(f, "{id}--"),
             Self::Call { id, args } => write!(f, "{id}! {}", args.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(" ")),
+            Self::If { cond, body, else_body } => match else_body {
+                Some(else_body) => write!(f, "if {cond} {body} else {else_body}"),
+                None => write!(f, "if {cond} {body}")
+            },
         }
     }
 }
@@ -105,6 +110,13 @@ impl Parser {
         self.advance();
         Ok(())
     }
+    pub fn expect(&mut self, token: T, context: &mut Context) -> Result<(), E> {
+        if self.token() != &token {
+            context.trace(self.pos().clone(), &self.path);
+            return Err(E::ExpectedToken(token, self.token().clone()))
+        }
+        Ok(())
+    }
     pub fn ops(&self, layer: usize) -> Layer {
         self.layers.get(layer).or_else(|| Some(&Layer::Atom)).unwrap().clone()
     }
@@ -164,13 +176,15 @@ impl Parser {
     pub fn parse(&mut self, context: &mut Context) -> Result<Node, E> {
         let mut nodes: Vec<Node> = vec![];
         while self.token() != &T::EOF {
-            let node = self.stat(context)?;
+            let node = self.stat(0, context)?;
             nodes.push(node);
         }
         Ok(Node(N::Body(nodes), Position::new(0..self.ln, 0..self.col)))
     }
-    pub fn stat(&mut self, context: &mut Context) -> Result<Node, E> {
+    pub fn stat(&mut self, start_indent: u16, context: &mut Context) -> Result<Node, E> {
         let start = self.col;
+        let mut indent: u16 = start_indent;
+        if let T::Indent(i) = self.token() { indent += *i; self.advance(); }
         match self.token() {
             T::Var | T::Global => {
                 let prefix = self.token().clone();
@@ -212,6 +226,43 @@ impl Parser {
                 Ok(Node(N::Call {
                     id: Box::new(id), args
                 }, Position::new(self.ln..self.ln+1, start..self.col)))
+            }
+            T::If => {
+                let (start_ln, start_col) = (self.ln, self.col);
+                self.advance();
+                let cond = self.expr(context)?;
+                self.expect(T::EOL, context)?;
+                self.advance_ln();
+                let mut nodes: Vec<Node> = vec![];
+                let (body_start_ln, body_start_col) = (self.ln, self.col);
+                while let T::Indent(i) = self.token() {
+                    if *i <= indent { break }
+                    let node = self.stat(0, context)?;
+                    nodes.push(node);
+                }
+                let body = Node(N::Body(nodes), Position::new(body_start_ln..self.ln, body_start_col..self.col));
+                let mut else_indent = indent;
+                if let T::Indent(i) = self.token() { else_indent = *i; self.advance(); }
+                let mut else_body: Option<Box<Node>> = None;
+                if self.token() == &T::Else {
+                    self.advance();
+                    if self.token() == &T::If {
+                        else_body = Some(Box::new(self.stat(else_indent, context)?));
+                    } else {
+                        self.advance_ln();
+                        let mut else_nodes: Vec<Node> = vec![];
+                        let (else_start_ln, else_start_col) = (self.ln, self.col);
+                        while let T::Indent(i) = self.token() {
+                            if *i <= indent { break }
+                            let node = self.stat(0, context)?;
+                            else_nodes.push(node);
+                        }
+                        else_body = Some(Box::new(Node(N::Body(else_nodes), Position::new(else_start_ln..self.ln, else_start_col..self.col))));
+                    }
+                }
+                Ok(Node(N::If {
+                    cond: Box::new(cond), body: Box::new(body), else_body: else_body
+                }, Position::new(start_ln..self.ln, start_col..self.col)))
             }
             _ => {
                 context.trace(self.pos().clone(), &self.path);
