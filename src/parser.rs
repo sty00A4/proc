@@ -112,9 +112,20 @@ impl Parser {
                     let op = self.token().clone();
                     self.advance();
                     let right = self.operation(self.ops(layer + 1), layer + 1, context)?;
-                    left = Node(N::Binary{
-                        op, left: Box::new(left.clone()), right: Box::new(right)
-                    }, Position::new(self.ln..self.ln+1, start..self.col))
+                    let n = match &left.0 {
+                        N::Binary { op: op_, left: left_, right: right_ } if &op == op_ => 
+                        N::Multi { op, nodes: vec![left_.as_ref().clone(), right_.as_ref().clone(), right] },
+                        
+                        N::Multi { op: op_, nodes: nodes_ } if &op == op_ => {
+                            let mut new_nodes = nodes_.clone();
+                            new_nodes.push(right);
+                            N::Multi { op, nodes: new_nodes }
+                        }
+                        _ => N::Binary{
+                            op, left: Box::new(left.clone()), right: Box::new(right)
+                        }
+                    };
+                    left = Node(n, Position::new(self.ln..self.ln+1, start..self.col))
                 }
                 Ok(left)
             }
