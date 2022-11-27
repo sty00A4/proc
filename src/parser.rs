@@ -16,11 +16,12 @@ pub enum N {
     Inc(Box<Node>), Dec(Box<Node>),
     Call { id: Box<Node>, args: Vec<Node> },
     If { cond: Box<Node>, body: Box<Node>, else_body: Option<Box<Node>> },
+    While { cond: Box<Node>, body: Box<Node> },
 }
 impl std::fmt::Display for N {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Body(nodes) => write!(f, "\n{}\n", nodes.iter().map(|x| x.to_string()).collect::<Vec<String>>().join("\n")),
+            Self::Body(nodes) => write!(f, "{}", nodes.iter().map(|x| x.to_string()).collect::<Vec<String>>().join("; ")),
             Self::Wildcard => write!(f, "_"),
             Self::Null => write!(f, "null"),
             Self::Int(v) => write!(f, "{v:?}"),
@@ -42,6 +43,7 @@ impl std::fmt::Display for N {
                 Some(else_body) => write!(f, "if {cond} {body} else {else_body}"),
                 None => write!(f, "if {cond} {body}")
             },
+            Self::While { cond, body } => write!(f, "while {cond} {body}"),
         }
     }
 }
@@ -78,6 +80,7 @@ impl Node {
                 Some(else_body) => format!("{s}if {} \n{}\n{s}else\n{}", cond.display(indent), body.display(indent + 1), else_body.display(indent + 1)),
                 None => format!("if {} \n{}\n", cond.display(indent), body.display(indent + 1))
             },
+            N::While { cond, body } => format!("while {} \n{}\n", cond.display(indent), body.display(indent + 1)),
         }
     }
 }
@@ -291,6 +294,24 @@ impl Parser {
                 }
                 Ok(Node(N::If {
                     cond: Box::new(cond), body: Box::new(body), else_body: else_body
+                }, Position::new(start_ln..self.ln, start_col..self.col)))
+            }
+            T::While => {
+                let (start_ln, start_col) = (self.ln, self.col);
+                self.advance();
+                let cond = self.expr(context)?;
+                self.expect(T::EOL, context)?;
+                self.advance_ln();
+                let mut nodes: Vec<Node> = vec![];
+                let (body_start_ln, body_start_col) = (self.ln, self.col);
+                while let T::Indent(i) = self.token() {
+                    if *i <= indent { break }
+                    let node = self.stat(0, context)?;
+                    nodes.push(node);
+                }
+                let body = Node(N::Body(nodes), Position::new(body_start_ln..self.ln, body_start_col..self.col));
+                Ok(Node(N::While {
+                    cond: Box::new(cond), body: Box::new(body)
                 }, Position::new(start_ln..self.ln, start_col..self.col)))
             }
             _ => {
