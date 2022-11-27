@@ -33,6 +33,11 @@ pub enum T {
     Int(i64), Float(f64), Bool(bool), String(String),
     ID(String)
 }
+impl std::fmt::Display for T {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "[{}]", format!("{self:?}").to_lowercase())
+    }
+}
 impl T {
     pub fn name(&self) -> &str {
         match self {
