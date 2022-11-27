@@ -337,6 +337,30 @@ pub fn lex(path: &String, text: &String, context: &mut Context) -> Result<Vec<Ve
                         })(), Position::new(ln..ln+1, start..col)));
                         continue
                     }
+                    if DIGITS.contains(&&line[col..col+1]) {
+                        let start = col;
+                        let mut number = String::new();
+                        while col < line.len() {
+                            if !DIGITS.contains(&&line[col..col+1]) { break }
+                            number.push_str(&line[col..col+1]);
+                            col += 1;
+                        }
+                        if col < line.len() {
+                            if &line[col..col+1] == "." {
+                                number.push_str(&line[col..col+1]);
+                                col += 1;
+                                while col < line.len() {
+                                    if !DIGITS.contains(&&line[col..col+1]) { break }
+                                    number.push_str(&line[col..col+1]);
+                                    col += 1;
+                                }
+                                tokens[ln].push(Token(T::Float(number.parse().unwrap()), Position::new(ln..ln+1, start..col)));
+                                continue
+                            }
+                        }
+                        tokens[ln].push(Token(T::Int(number.parse().unwrap()), Position::new(ln..ln+1, start..col)));
+                        continue
+                    }
                     // error
                     context.trace(Position::new(ln..ln+1, col..col+1), path);
                     return Err(E::IllegalChar(line[col..col+1].to_string()))
