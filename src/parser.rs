@@ -58,11 +58,23 @@ pub struct Parser {
     tokens: Vec<Vec<Token>>,
     path: String,
     col: usize,
-    ln: usize
+    ln: usize,
+    layers: Vec<Layer>
 }
 impl Parser {
     pub fn new(path: &String, tokens: Vec<Vec<Token>>) -> Self {
-        Self { tokens, path: path.clone(), col: 0, ln: 0 }
+        Self {
+            tokens, path: path.clone(), col: 0, ln: 0,
+            layers: vec![
+                Layer::Binary(vec![T::And, T::Or, T::Xor]),
+                Layer::Binary(vec![T::EQ, T::NE, T::LT, T::LE, T::GT, T::GE]),
+                Layer::Binary(vec![T::Add, T::Sub]),
+                Layer::Binary(vec![T::Mul, T::Div, T::Mod]),
+                Layer::UnaryLeft(vec![T::Add, T::Sub]),
+                Layer::UnaryLeft(vec![T::Len]),
+                Layer::Binary(vec![T::Field]),
+            ]
+        }
     }
     pub fn token(&self) -> &T {
         match self.tokens.get(self.ln) {
@@ -93,16 +105,7 @@ impl Parser {
         Ok(())
     }
     pub fn ops(&self, layer: usize) -> Layer {
-        let layers = [
-            Layer::Binary(vec![T::And, T::Or, T::Xor]),
-            Layer::Binary(vec![T::EQ, T::NE, T::LT, T::LE, T::GT, T::GE]),
-            Layer::Binary(vec![T::Add, T::Sub]),
-            Layer::Binary(vec![T::Mul, T::Div, T::Mod]),
-            Layer::UnaryLeft(vec![T::Add, T::Sub]),
-            Layer::UnaryLeft(vec![T::Len]),
-            Layer::Binary(vec![T::Field]),
-        ];
-        layers.get(layer).or_else(|| Some(&Layer::Atom)).unwrap().clone()
+        self.layers.get(layer).or_else(|| Some(&Layer::Atom)).unwrap().clone()
     }
     pub fn operation(&mut self, layer_type: Layer, layer: usize, context: &mut Context) -> Result<Node, E> {
         match layer_type {
@@ -171,7 +174,7 @@ impl Parser {
             T::Var | T::Global => {
                 let prefix = self.token().clone();
                 self.advance();
-                let id = self.atom(context)?; // field
+                let id = self.operation(self.layers.last().unwrap().clone(), self.layers.len()-1, context)?;
                 self.advance_expect(T::Assign, context)?;
                 let expr = self.expr(context)?;
                 self.advance_ln();
@@ -180,7 +183,7 @@ impl Parser {
                 }, Position::new(self.ln..self.ln+1, start..self.col)))
             }
             T::ID(_) => {
-                let id = self.atom(context)?; // field
+                let id = self.operation(self.layers.last().unwrap().clone(), self.layers.len()-1, context)?;
                 if [T::AddAssign, T::SubAssign, T::MulAsssign, T::DivAssign, T::ModAssign].contains(&self.token()) {
                     let op = self.token().clone();
                     self.advance();
