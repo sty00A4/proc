@@ -8,7 +8,7 @@ use crate::lexer::*;
 pub enum N {
     Body(Vec<Node>),
     Wildcard, Null, Int(i64), Float(f64), Bool(bool), String(String), Vector(Vec<Node>),
-    Object(HashMap<Node, Node>), ID(String),
+    Object(Vec<(Node, Node)>), ID(String),
     Binary { op: T, left: Box<Node>, right: Box<Node> },
     Unary { op: T, node: Box<Node> }, Multi { op: T, nodes: Vec<Node> },
     Assign { global: bool, id: Box<Node>, expr: Box<Node> },
