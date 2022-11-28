@@ -91,7 +91,7 @@ impl Node {
             N::Binary { op, left, right } => format!("{} {op} {}", left.display(indent), right.display(indent)),
             N::Unary { op, node } => format!("{op} {}", node.display(indent)),
             N::Multi { op, nodes } => format!("{op} {}", nodes.iter().map(|x| x.display(indent)).collect::<Vec<String>>().join(" ")),
-            N::Assign { global, id, expr } => if *global { format!("{s}global {} = {}", id.display(indent), expr.display(indent)) } else { format!("{s}var {id} = {expr}") }
+            N::Assign { global, id, expr } => if *global { format!("{s}global {} = {}", id.display(indent), expr.display(indent)) } else { format!("{s}var {} = {}", id.display(indent), expr.display(indent)) }
             N::OpAssign { op, id, expr } => format!("{s}{} {op} {}", id.display(indent), expr.display(indent)),
             N::Inc(id) => format!("{s}{}++", id.display(indent)),
             N::Dec(id) => format!("{s}{}--", id.display(indent)),
