@@ -447,6 +447,7 @@ impl Parser {
             T::EvalIn => {
                 self.advance();
                 let node = self.expr(context)?;
+                // some weird shit is goinf on here with the operation function
                 Ok(node)
             }
             _ => {
