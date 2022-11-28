@@ -2,13 +2,14 @@ use std::collections::HashMap;
 use crate::position::*;
 use crate::errors::*;
 use crate::context::*;
+use crate::value::*;
 use crate::lexer::*;
 
 #[derive(Debug, Clone)]
 pub enum N {
     Body(Vec<Node>),
     Wildcard, Null, Int(i64), Float(f64), Bool(bool), String(String),
-    Vector(Vec<Node>), Object(Vec<(Node, Node)>), ID(String),
+    Vector(Vec<Node>), Object(Vec<(Node, Node)>), ID(String), Type(Type),
     Binary { op: T, left: Box<Node>, right: Box<Node> },
     Unary { op: T, node: Box<Node> }, Multi { op: T, nodes: Vec<Node> },
     Assign { global: bool, id: Box<Node>, expr: Box<Node> }, OpAssign { op: T, id: Box<Node>, expr: Box<Node> },
@@ -31,6 +32,7 @@ impl std::fmt::Display for N {
             Self::Vector(v) => write!(f, "[{}]", v.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(", ")),
             Self::Object(v) => write!(f, "{{ {} }}", v.iter().map(|(k, v)| format!("{k} = {v}")).collect::<Vec<String>>().join(", ")),
             Self::ID(v) => write!(f, "{v}"),
+            Self::Type(v) => write!(f, "{v}"),
             Self::Binary { op, left, right } => write!(f, "{left} {op} {right}"),
             Self::Unary { op, node } => write!(f, "{op} {node}"),
             Self::Multi { op, nodes } => write!(f, "{op} {}", nodes.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(" ")),
@@ -85,6 +87,7 @@ impl Node {
             N::Vector(v) => format!("[{}]", v.iter().map(|x| x.display(indent)).collect::<Vec<String>>().join(", ")),
             N::Object(v) => format!("{{ {} }}", v.iter().map(|(k, v)| format!("{k} = {v}")).collect::<Vec<String>>().join(", ")),
             N::ID(v) => format!("{v}"),
+            N::Type(v) => format!("{v}"),
             N::Binary { op, left, right } => format!("{} {op} {}", left.display(indent), right.display(indent)),
             N::Unary { op, node } => format!("{op} {}", node.display(indent)),
             N::Multi { op, nodes } => format!("{op} {}", nodes.iter().map(|x| x.display(indent)).collect::<Vec<String>>().join(" ")),
@@ -143,6 +146,7 @@ impl Parser {
                 Layer::UnaryLeft(vec![T::Add, T::Sub]),
                 Layer::UnaryLeft(vec![T::Len]),
                 Layer::UnaryRight(vec![T::Safe]),
+                Layer::Binary(vec![T::Option]),
                 Layer::Binary(vec![T::Field]),
             ]
         }
@@ -169,16 +173,16 @@ impl Parser {
     pub fn advance_ln(&mut self) { self.ln += 1; self.col = 0; }
     pub fn advance_expect(&mut self, token: T, context: &mut Context) -> Result<(), E> {
         if self.token() != &token {
-            context.trace(self.pos().clone(), &self.path);
-            return Err(E::ExpectedToken(token, self.token().clone()))
+            context.trace(self.pos().to_owned(), &self.path);
+            return Err(E::ExpectedToken(token, self.token().to_owned()))
         }
         self.advance();
         Ok(())
     }
     pub fn expect(&mut self, token: T, context: &mut Context) -> Result<(), E> {
         if self.token() != &token {
-            context.trace(self.pos().clone(), &self.path);
-            return Err(E::ExpectedToken(token, self.token().clone()))
+            context.trace(self.pos().to_owned(), &self.path);
+            return Err(E::ExpectedToken(token, self.token().to_owned()))
         }
         Ok(())
     }
@@ -191,7 +195,7 @@ impl Parser {
                 let start = self.col;
                 let mut left = self.operation(self.ops(layer + 1), layer + 1, context)?;
                 while ops.contains(&self.token()) {
-                    let op = self.token().clone();
+                    let op = self.token().to_owned();
                     self.advance();
                     let right = self.operation(self.ops(layer + 1), layer + 1, context)?;
                     let n = match &left.0 {
@@ -214,7 +218,7 @@ impl Parser {
             Layer::UnaryLeft(ops) => {
                 let start = self.col;
                 if ops.contains(&self.token()) {
-                    let op = self.token().clone();
+                    let op = self.token().to_owned();
                     self.advance();
                     let node = self.operation(self.ops(layer), layer, context)?;
                     return Ok(Node(N::Unary{
@@ -227,7 +231,7 @@ impl Parser {
                 let start = self.col;
                 let mut node = self.operation(self.ops(layer + 1), layer + 1, context)?;
                 while ops.contains(&self.token()) {
-                    let op = self.token().clone();
+                    let op = self.token().to_owned();
                     self.advance();
                     node = Node(N::Unary{
                         op, node: Box::new(node.clone())
@@ -253,7 +257,7 @@ impl Parser {
         if let T::Indent(i) = self.token() { indent += *i; self.advance(); }
         match self.token() {
             T::Var | T::Global => {
-                let prefix = self.token().clone();
+                let prefix = self.token().to_owned();
                 self.advance();
                 let id = self.operation(self.layers.last().unwrap().clone(), self.layers.len()-1, context)?;
                 self.advance_expect(T::Assign, context)?;
@@ -266,7 +270,7 @@ impl Parser {
             T::ID(_) => {
                 let id = self.operation(self.layers.last().unwrap().clone(), self.layers.len()-1, context)?;
                 if [T::AddAssign, T::SubAssign, T::MulAsssign, T::DivAssign, T::ModAssign].contains(&self.token()) {
-                    let op = self.token().clone();
+                    let op = self.token().to_owned();
                     self.advance();
                     let expr = self.expr(context)?;
                     self.advance_ln();
@@ -357,14 +361,14 @@ impl Parser {
                 Ok(Node(N::Return(Box::new(node)), Position::new(self.ln..self.ln+1, start..self.col)))
             }
             T::Break => {
-                let node = Node(N::Break, self.pos().clone());
+                let node = Node(N::Break, self.pos().to_owned());
                 self.advance();
                 self.expect(T::EOL, context)?;
                 self.advance_ln();
                 Ok(node)
             }
             T::Continue => {
-                let node = Node(N::Continue, self.pos().clone());
+                let node = Node(N::Continue, self.pos().to_owned());
                 self.advance();
                 self.expect(T::EOL, context)?;
                 self.advance_ln();
@@ -381,7 +385,14 @@ impl Parser {
                         let mut typ: Option<Node> = None;
                         let mut default: Option<Node> = None;
                         let id = self.atom(context)?;
-
+                        if self.token() == &T::Rep {
+                            self.advance();
+                            typ = Some(self.operation(self.ops(0), 0, context)?);
+                        }
+                        if self.token() == &T::EQ {
+                            self.advance();
+                            default = Some(self.expr(context)?);
+                        }
                         params.push((id, typ, default));
                     }
                 }
@@ -401,8 +412,8 @@ impl Parser {
                 }, Position::new(start_ln..self.ln, start_col..self.col)))
             }
             _ => {
-                context.trace(self.pos().clone(), &self.path);
-                Err(E::UnexpectedToken(self.token().clone()))
+                context.trace(self.pos().to_owned(), &self.path);
+                Err(E::UnexpectedToken(self.token().to_owned()))
             }
         }
     }
@@ -411,16 +422,17 @@ impl Parser {
     }
     pub fn atom(&mut self, context: &mut Context) -> Result<Node, E> {
         let ret: Result<Node, E> = match self.token() {
-            T::Wildcard => Ok(Node(N::Wildcard, self.pos().clone())),
-            T::Null => Ok(Node(N::Null, self.pos().clone())),
-            T::Int(v) => Ok(Node(N::Int(v.clone()), self.pos().clone())),
-            T::Float(v) => Ok(Node(N::Float(v.clone()), self.pos().clone())),
-            T::Bool(v) => Ok(Node(N::Bool(v.clone()), self.pos().clone())),
-            T::String(v) => Ok(Node(N::String(v.clone()), self.pos().clone())),
-            T::ID(id) => Ok(Node(N::ID(id.clone()), self.pos().clone())),
+            T::Wildcard => Ok(Node(N::Wildcard, self.pos().to_owned())),
+            T::Null => Ok(Node(N::Null, self.pos().to_owned())),
+            T::Int(v) => Ok(Node(N::Int(*v), self.pos().to_owned())),
+            T::Float(v) => Ok(Node(N::Float(*v), self.pos().to_owned())),
+            T::Bool(v) => Ok(Node(N::Bool(*v), self.pos().to_owned())),
+            T::String(v) => Ok(Node(N::String(v.to_owned()), self.pos().to_owned())),
+            T::Type(v) => Ok(Node(N::Type(v.to_owned()), self.pos().to_owned())),
+            T::ID(id) => Ok(Node(N::ID(id.to_owned()), self.pos().to_owned())),
             _ => {
-                context.trace(self.pos().clone(), &self.path);
-                Err(E::UnexpectedToken(self.token().clone()))
+                context.trace(self.pos().to_owned(), &self.path);
+                Err(E::UnexpectedToken(self.token().to_owned()))
             }
         };
         self.advance();

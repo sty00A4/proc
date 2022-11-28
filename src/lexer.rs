@@ -2,6 +2,7 @@ use std::cmp::min;
 use crate::position::*;
 use crate::errors::*;
 use crate::context::*;
+use crate::value::*;
 
 static DIGITS: [&str; 10] = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
 static LETTERS: [&str; 53] = [
@@ -31,7 +32,7 @@ pub enum T {
 //  _
     Wildcard, Null,
     Int(i64), Float(f64), Bool(bool), String(String),
-    ID(String)
+    ID(String), Type(Type)
 }
 impl std::fmt::Display for T {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -102,6 +103,7 @@ impl T {
             Self::Bool(_) => "bool",
             Self::String(_) => "str",
             Self::ID(_) => "id",
+            Self::Type(_) => "type",
         }
     }
 }
@@ -351,6 +353,14 @@ pub fn lex(path: &String, text: &String, context: &mut Context) -> Result<Vec<Ve
                             "or" => T::Or,
                             "and" => T::And,
                             "xor" => T::Xor,
+                            "any" => T::Type(Type::Any),
+                            "undefined" => T::Type(Type::Undefiend),
+                            "int" => T::Type(Type::Int),
+                            "float" => T::Type(Type::Float),
+                            "bool" => T::Type(Type::Bool),
+                            "str" => T::Type(Type::String),
+                            "tuple" => T::Type(Type::Tuple(vec![])),
+                            "vec" => T::Type(Type::Vector(Box::new(Type::Any))),
                             _ => T::ID(id)
                         })(), Position::new(ln..ln+1, start..col)));
                         continue
