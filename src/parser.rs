@@ -101,7 +101,7 @@ impl Node {
                 None => format!("if {} \n{}\n", cond.display(indent), body.display(indent + 1))
             },
             N::While { cond, body } => format!("while {} \n{}\n", cond.display(indent), body.display(indent + 1)),
-            N::Proc { name, params, body } => format!("proc {} <- {} {}", name.display(indent),
+            N::Proc { name, params, body } => format!("proc {} <- {} \n{}\n", name.display(indent),
             params.iter().map(|(id, typ, default)|
                 match typ {
                     Some(typv) => match default {
@@ -113,7 +113,7 @@ impl Node {
                         None => format!("{}", id.display(indent))
                     }
                 }
-            ).collect::<Vec<String>>().join(" "), body.display(indent)),
+            ).collect::<Vec<String>>().join(" "), body.display(indent + 1)),
         }
     }
 }
@@ -369,6 +369,36 @@ impl Parser {
                 self.expect(T::EOL, context)?;
                 self.advance_ln();
                 Ok(node)
+            }
+            T::Proc => {
+                let (start_ln, start_col) = (self.ln, self.col);
+                self.advance();
+                let name = self.atom(context)?;
+                let mut params: Vec<(Node, Option<Node>, Option<Node>)> = vec![];
+                if self.token() == &T::In {
+                    self.advance();
+                    while self.token() != &T::EOL {
+                        let mut typ: Option<Node> = None;
+                        let mut default: Option<Node> = None;
+                        let id = self.atom(context)?;
+
+                        params.push((id, typ, default));
+                    }
+                }
+                self.expect(T::EOL, context)?;
+                self.advance_ln();
+                let mut nodes: Vec<Node> = vec![];
+                let (body_start_ln, body_start_col) = (self.ln, self.col);
+                while let T::Indent(i) = self.token() {
+                    if *i <= indent { break }
+                    let node = self.stat(0, context)?;
+                    nodes.push(node);
+                }
+                let body = Node(N::Body(nodes), Position::new(body_start_ln..self.ln, body_start_col..self.col));
+                
+                Ok(Node(N::Proc {
+                    name: Box::new(name), params, body: Box::new(body)
+                }, Position::new(start_ln..self.ln, start_col..self.col)))
             }
             _ => {
                 context.trace(self.pos().clone(), &self.path);
