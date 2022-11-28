@@ -1,10 +1,11 @@
-use std::{collections::HashSet, hash::Hash};
+use std::{collections::{HashSet, HashMap}, hash::Hash};
 
 #[derive(Clone)]
 pub enum V {
     Wildcard, Null,
     Int(i64), Float(f64), Bool(bool), String(String),
-    Vector(Vec<V>, Type)
+    Vector(Vec<V>, Type), Object(HashMap<String, V>),
+    Type(Type)
 }
 impl std::fmt::Display for V {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -16,6 +17,8 @@ impl std::fmt::Display for V {
             Self::Bool(v) => write!(f, "{v}"),
             Self::String(v) => write!(f, "{v}"),
             Self::Vector(v, _) => write!(f, "{v:?}"),
+            Self::Object(v) => write!(f, "obj:{:?}", v as *const HashMap<String, V>),
+            Self::Type(v) => write!(f, "{v}"),
         }
     }
 }
@@ -29,6 +32,8 @@ impl std::fmt::Debug for V {
             Self::Bool(v) => write!(f, "{v:?}"),
             Self::String(v) => write!(f, "{v:?}"),
             Self::Vector(v, _) => write!(f, "{v:?}"),
+            Self::Object(v) => write!(f, "obj:{:?}", v as *const HashMap<String, V>),
+            Self::Type(v) => write!(f, "{v:?}"),
         }
     }
 }
@@ -76,22 +81,12 @@ impl PartialEq for V {
 pub enum Type {
     Any, Undefiend,
     Int, Float, Bool, String,
-    Vector(Box<Type>),
+    Vector(Box<Type>), Object,
     Union(Vec<Type>), Scission(Vec<Type>)
 }
 impl std::fmt::Display for Type {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Any => write!(f, "any"),
-            Self::Undefiend => write!(f, "undefined"),
-            Self::Int => write!(f, "int"),
-            Self::Float => write!(f, "float"),
-            Self::Bool => write!(f, "bool"),
-            Self::String => write!(f, "str"),
-            Self::Vector(t) => write!(f, "vec"),
-            Self::Union(types) => write!(f, "union[{}]", types.iter().map(|x| x.to_string()).collect::<Vec<String>>().join("|")),
-            Self::Scission(types) => write!(f, "scission[{}]", types.iter().map(|x| x.to_string()).collect::<Vec<String>>().join("|")),
-        }
+        write!(f, "{self:?}")
     }
 }
 impl std::fmt::Debug for Type {
@@ -104,6 +99,7 @@ impl std::fmt::Debug for Type {
             Self::Bool => write!(f, "bool"),
             Self::String => write!(f, "str"),
             Self::Vector(t) => write!(f, "vec"),
+            Self::Object => write!(f, "obj"),
             Self::Union(types) => write!(f, "union[{}]", types.iter().map(|x| x.to_string()).collect::<Vec<String>>().join("|")),
             Self::Scission(types) => write!(f, "scission[{}]", types.iter().map(|x| x.to_string()).collect::<Vec<String>>().join("|")),
         }
