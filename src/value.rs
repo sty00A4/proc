@@ -4,6 +4,7 @@ use std::{collections::{HashSet, HashMap}, hash::Hash};
 pub enum V {
     Wildcard, Null,
     Int(i64), Float(f64), Bool(bool), String(String),
+    Tuple(Vec<V>),
     Vector(Vec<V>, Type), Object(HashMap<String, V>),
     Type(Type)
 }
@@ -16,6 +17,7 @@ impl std::fmt::Display for V {
             Self::Float(v) => write!(f, "{v}"),
             Self::Bool(v) => write!(f, "{v}"),
             Self::String(v) => write!(f, "{v}"),
+            Self::Tuple(v) => write!(f, "({})", v.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(", ")),
             Self::Vector(v, _) => write!(f, "{v:?}"),
             Self::Object(v) => write!(f, "obj:{:?}", v as *const HashMap<String, V>),
             Self::Type(v) => write!(f, "{v}"),
@@ -31,6 +33,7 @@ impl std::fmt::Debug for V {
             Self::Float(v) => write!(f, "{v:?}"),
             Self::Bool(v) => write!(f, "{v:?}"),
             Self::String(v) => write!(f, "{v:?}"),
+            Self::Tuple(v) => write!(f, "({})", v.iter().map(|x| format!("{x:?}")).collect::<Vec<String>>().join(", ")),
             Self::Vector(v, _) => write!(f, "{v:?}"),
             Self::Object(v) => write!(f, "obj:{:?}", v as *const HashMap<String, V>),
             Self::Type(v) => write!(f, "{v:?}"),
@@ -68,8 +71,20 @@ impl PartialEq for V {
                 Self::Wildcard => true,
                 _ => false
             }
+            Self::Tuple(v1) => match other {
+                Self::Tuple(v2) => v1 == v2,
+                _ => false
+            }
             Self::Vector(v1, t1) => match other {
                 Self::Vector(v2, t2) => v1 == v2 && t1 == t2,
+                _ => false
+            }
+            Self::Object(v1) => match other {
+                Self::Object(v2) => v1 == v2,
+                _ => false
+            }
+            Self::Type(v1) => match other {
+                Self::Type(v2) => v1 == v2,
                 _ => false
             }
             _ => false
@@ -81,7 +96,7 @@ impl PartialEq for V {
 pub enum Type {
     Any, Undefiend,
     Int, Float, Bool, String,
-    Vector(Box<Type>), Object,
+    Tuple(Vec<Type>), Vector(Box<Type>), Object,
     Union(Vec<Type>), Scission(Vec<Type>)
 }
 impl std::fmt::Display for Type {
@@ -98,6 +113,7 @@ impl std::fmt::Debug for Type {
             Self::Float => write!(f, "float"),
             Self::Bool => write!(f, "bool"),
             Self::String => write!(f, "str"),
+            Self::Tuple(types) => write!(f, "({})", types.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(", ")),
             Self::Vector(t) => write!(f, "vec"),
             Self::Object => write!(f, "obj"),
             Self::Union(types) => write!(f, "union[{}]", types.iter().map(|x| x.to_string()).collect::<Vec<String>>().join("|")),
@@ -144,8 +160,22 @@ impl PartialEq for Type {
                 Self::Scission(_) => other == self,
                 _ => false
             }
+            Self::Tuple(t1) => match other {
+                Self::Tuple(t2) => t1 == t2,
+                Self::Any => true,
+                Self::Union(_) => other == self,
+                Self::Scission(_) => other == self,
+                _ => false
+            }
             Self::Vector(t1) => match other {
                 Self::Vector(t2) => t1.as_ref() == t2.as_ref(),
+                Self::Any => true,
+                Self::Union(_) => other == self,
+                Self::Scission(_) => other == self,
+                _ => false
+            }
+            Self::Object => match other {
+                Self::Object => true,
                 Self::Any => true,
                 Self::Union(_) => other == self,
                 Self::Scission(_) => other == self,
