@@ -389,7 +389,7 @@ impl Parser {
                             self.advance();
                             typ = Some(self.operation(self.ops(0), 0, context)?);
                         }
-                        if self.token() == &T::EQ {
+                        if self.token() == &T::Assign {
                             self.advance();
                             default = Some(self.expr(context)?);
                         }
