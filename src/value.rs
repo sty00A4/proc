@@ -87,7 +87,6 @@ impl PartialEq for V {
                 Self::Type(v2) => v1 == v2,
                 _ => false
             }
-            _ => false
         }
     }
 }
@@ -239,7 +238,6 @@ impl PartialEq for Type {
                     true
                 }
             }
-            _ => false
         }
     }
 }
