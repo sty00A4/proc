@@ -3,17 +3,27 @@ An interpreted programming language, implementing concepts of rules and containe
 
 ## Types
 `any` - all types
+
 `undefined` - the type of `null`
+
 `int` - short for *integer*, a whole number (+/-)
+
 `float` - short for *floating point number*, a decimal number (+/-)
+
 `bool` - short for *boolean*, one bit (true/false)
+
 `str` - short for *string*, a string of characters
+
 `vec` - short for *vector*, a sequence of values
+
 `obj` - short for *object*, a table of keys and values
+
 `rule` - a [rule](#rules)
+
 `container` - a [container](#container)
 
 `union` - a set of types which are included
+
 `scission` - a set of types which are excluded
 
 ## Rules
