@@ -17,6 +17,7 @@ pub enum N {
     Call { id: Box<Node>, args: Vec<Node> },
     If { cond: Box<Node>, body: Box<Node>, else_body: Option<Box<Node>> },
     While { cond: Box<Node>, body: Box<Node> },
+    Proc { name: Box<Node>, params: Vec<(Node, Option<Node>, Option<Node>)>, body: Box<Node> }
 }
 impl std::fmt::Display for N {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -44,6 +45,19 @@ impl std::fmt::Display for N {
                 None => write!(f, "if {cond} {body}")
             },
             Self::While { cond, body } => write!(f, "while {cond} {body}"),
+            Self::Proc { name, params, body } => write!(f, "proc {name} <- {} {body}",
+            params.iter().map(|(id, typ, default)|
+                match typ {
+                    Some(typv) => match default {
+                        Some(defaultv) => format!("{id} : {typv} = {defaultv}"),
+                        None => format!("{id} : {typv}")
+                    }
+                    None => match default {
+                        Some(defaultv) => format!("{id} = {defaultv}"),
+                        None => format!("{id}")
+                    }
+                }
+            ).collect::<Vec<String>>().join(" ")),
         }
     }
 }
@@ -81,6 +95,19 @@ impl Node {
                 None => format!("if {} \n{}\n", cond.display(indent), body.display(indent + 1))
             },
             N::While { cond, body } => format!("while {} \n{}\n", cond.display(indent), body.display(indent + 1)),
+            N::Proc { name, params, body } => format!("proc {} <- {} {}", name.display(indent),
+            params.iter().map(|(id, typ, default)|
+                match typ {
+                    Some(typv) => match default {
+                        Some(defaultv) => format!("{} : {} = {}", id.display(indent), typv.display(indent), defaultv.display(indent)),
+                        None => format!("{} : {}", id.display(indent), typv.display(indent))
+                    }
+                    None => match default {
+                        Some(defaultv) => format!("{} = {}", id.display(indent), defaultv.display(indent)),
+                        None => format!("{}", id.display(indent))
+                    }
+                }
+            ).collect::<Vec<String>>().join(" "), body.display(indent)),
         }
     }
 }
