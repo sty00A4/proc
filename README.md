@@ -1,5 +1,5 @@
 # Proc
-An interpreted programming language, implementing concepts of rules and containers.
+An interpreted programming language, implementing the concepts of rules and containers.
 
 ## Types
 `any` - all types
