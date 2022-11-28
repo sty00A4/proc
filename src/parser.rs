@@ -17,6 +17,7 @@ pub enum N {
     Return(Box<Node>), Break, Continue,
     Call { id: Box<Node>, args: Vec<Node> },
     If { cond: Box<Node>, body: Box<Node>, else_body: Option<Box<Node>> }, While { cond: Box<Node>, body: Box<Node> },
+    IfExpr { cond: Box<Node>, node: Box<Node>, else_node: Box<Node> },
     Proc { name: Box<Node>, params: Vec<(Node, Option<Node>, Option<Node>)>, body: Box<Node> }
 }
 impl std::fmt::Display for N {
@@ -49,6 +50,7 @@ impl std::fmt::Display for N {
                 Some(else_body) => write!(f, "if {cond} {body} else {else_body}"),
                 None => write!(f, "if {cond} {body}")
             },
+            Self::IfExpr { cond, node, else_node } => write!(f, "{node} if {cond} else {else_node}"),
             Self::While { cond, body } => write!(f, "while {cond} {body}"),
             Self::Proc { name, params, body } => write!(f, "proc {name} <- {} {body}",
             params.iter().map(|(id, typ, default)|
@@ -103,6 +105,7 @@ impl Node {
                 Some(else_body) => format!("{s}if {} \n{}\n{s}else\n{}", cond.display(indent), body.display(indent + 1), else_body.display(indent + 1)),
                 None => format!("if {} \n{}\n", cond.display(indent), body.display(indent + 1))
             },
+            N::IfExpr { cond, node, else_node } => format!("{} if {} else {}", node.display(indent), cond.display(indent), else_node.display(indent)),
             N::While { cond, body } => format!("while {} \n{}\n", cond.display(indent), body.display(indent + 1)),
             N::Proc { name, params, body } => format!("proc {} <- {} \n{}\n", name.display(indent),
             params.iter().map(|(id, typ, default)|
@@ -418,7 +421,18 @@ impl Parser {
         }
     }
     pub fn expr(&mut self, context: &mut Context) -> Result<Node, E> {
-        self.operation(self.ops(0), 0, context)
+        let start = self.col;
+        let node = self.operation(self.ops(0), 0, context)?;
+        if self.token() == &T::If {
+            self.advance();
+            let cond = self.operation(self.ops(0), 0, context)?;
+            self.advance_expect(T::Else, context)?;
+            let else_node = self.operation(self.ops(0), 0, context)?;
+            return Ok(Node(N::IfExpr {
+                cond: Box::new(cond), node: Box::new(node), else_node: Box::new(else_node)
+            }, Position::new(self.ln..self.ln+1, start..self.col)))
+        }
+        Ok(node)
     }
     pub fn atom(&mut self, context: &mut Context) -> Result<Node, E> {
         let ret: Result<Node, E> = match self.token() {
