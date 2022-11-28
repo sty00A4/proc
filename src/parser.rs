@@ -7,16 +7,14 @@ use crate::lexer::*;
 #[derive(Debug, Clone)]
 pub enum N {
     Body(Vec<Node>),
-    Wildcard, Null, Int(i64), Float(f64), Bool(bool), String(String), Vector(Vec<Node>),
-    Object(Vec<(Node, Node)>), ID(String),
+    Wildcard, Null, Int(i64), Float(f64), Bool(bool), String(String),
+    Vector(Vec<Node>), Object(Vec<(Node, Node)>), ID(String),
     Binary { op: T, left: Box<Node>, right: Box<Node> },
     Unary { op: T, node: Box<Node> }, Multi { op: T, nodes: Vec<Node> },
-    Assign { global: bool, id: Box<Node>, expr: Box<Node> },
-    OpAssign { op: T, id: Box<Node>, expr: Box<Node> },
+    Assign { global: bool, id: Box<Node>, expr: Box<Node> }, OpAssign { op: T, id: Box<Node>, expr: Box<Node> },
     Inc(Box<Node>), Dec(Box<Node>),
     Call { id: Box<Node>, args: Vec<Node> },
-    If { cond: Box<Node>, body: Box<Node>, else_body: Option<Box<Node>> },
-    While { cond: Box<Node>, body: Box<Node> },
+    If { cond: Box<Node>, body: Box<Node>, else_body: Option<Box<Node>> }, While { cond: Box<Node>, body: Box<Node> },
     Proc { name: Box<Node>, params: Vec<(Node, Option<Node>, Option<Node>)>, body: Box<Node> }
 }
 impl std::fmt::Display for N {
@@ -197,7 +195,7 @@ impl Parser {
                             new_nodes.push(right);
                             N::Multi { op, nodes: new_nodes }
                         }
-                        _ => N::Binary{
+                        _ => N::Binary {
                             op, left: Box::new(left.clone()), right: Box::new(right)
                         }
                     };
