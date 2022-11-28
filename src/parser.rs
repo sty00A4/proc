@@ -444,6 +444,11 @@ impl Parser {
             T::String(v) => Ok(Node(N::String(v.to_owned()), self.pos().to_owned())),
             T::Type(v) => Ok(Node(N::Type(v.to_owned()), self.pos().to_owned())),
             T::ID(id) => Ok(Node(N::ID(id.to_owned()), self.pos().to_owned())),
+            T::EvalIn => {
+                self.advance();
+                let node = self.expr(context)?;
+                Ok(node)
+            }
             _ => {
                 context.trace(self.pos().to_owned(), &self.path);
                 Err(E::UnexpectedToken(self.token().to_owned()))
