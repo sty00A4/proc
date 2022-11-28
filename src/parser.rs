@@ -13,6 +13,7 @@ pub enum N {
     Unary { op: T, node: Box<Node> }, Multi { op: T, nodes: Vec<Node> },
     Assign { global: bool, id: Box<Node>, expr: Box<Node> }, OpAssign { op: T, id: Box<Node>, expr: Box<Node> },
     Inc(Box<Node>), Dec(Box<Node>),
+    Return(Box<Node>), Break, Continue,
     Call { id: Box<Node>, args: Vec<Node> },
     If { cond: Box<Node>, body: Box<Node>, else_body: Option<Box<Node>> }, While { cond: Box<Node>, body: Box<Node> },
     Proc { name: Box<Node>, params: Vec<(Node, Option<Node>, Option<Node>)>, body: Box<Node> }
@@ -36,6 +37,10 @@ impl std::fmt::Display for N {
             Self::Assign { global, id, expr } => if *global { write!(f, "global {id} = {expr}") } else { write!(f, "var {id} = {expr}") }
             Self::OpAssign { op, id, expr } => write!(f, "{id} {op} {expr}"),
             Self::Inc(id) => write!(f, "{id}++"),
+            Self::Dec(id) => write!(f, "{id}--"),
+            Self::Return(node) => write!(f, "return {node}"),
+            Self::Break => write!(f, "break"),
+            Self::Continue => write!(f, "continue"),
             Self::Dec(id) => write!(f, "{id}--"),
             Self::Call { id, args } => write!(f, "{id}! {}", args.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(" ")),
             Self::If { cond, body, else_body } => match else_body {
@@ -87,6 +92,9 @@ impl Node {
             N::OpAssign { op, id, expr } => format!("{s}{} {op} {}", id.display(indent), expr.display(indent)),
             N::Inc(id) => format!("{s}{}++", id.display(indent)),
             N::Dec(id) => format!("{s}{}--", id.display(indent)),
+            N::Return(node) => format!("{s}return {}", node.display(indent)),
+            N::Break => format!("{s}break"),
+            N::Continue => format!("{s}continue"),
             N::Call { id, args } => format!("{s}{}! {}", id.display(indent), args.iter().map(|x| x.display(indent)).collect::<Vec<String>>().join(" ")),
             N::If { cond, body, else_body } => match else_body {
                 Some(else_body) => format!("{s}if {} \n{}\n{s}else\n{}", cond.display(indent), body.display(indent + 1), else_body.display(indent + 1)),
@@ -233,6 +241,7 @@ impl Parser {
     pub fn parse(&mut self, context: &mut Context) -> Result<Node, E> {
         let mut nodes: Vec<Node> = vec![];
         while self.token() != &T::EOF {
+            if self.token() == &T::EOL { self.advance_ln(); continue }
             let node = self.stat(0, context)?;
             nodes.push(node);
         }
@@ -338,6 +347,28 @@ impl Parser {
                 Ok(Node(N::While {
                     cond: Box::new(cond), body: Box::new(body)
                 }, Position::new(start_ln..self.ln, start_col..self.col)))
+            }
+            T::Return => {
+                let start = self.col;
+                self.advance();
+                let node = self.expr(context)?;
+                self.expect(T::EOL, context)?;
+                self.advance_ln();
+                Ok(Node(N::Return(Box::new(node)), Position::new(self.ln..self.ln+1, start..self.col)))
+            }
+            T::Break => {
+                let node = Node(N::Break, self.pos().clone());
+                self.advance();
+                self.expect(T::EOL, context)?;
+                self.advance_ln();
+                Ok(node)
+            }
+            T::Continue => {
+                let node = Node(N::Continue, self.pos().clone());
+                self.advance();
+                self.expect(T::EOL, context)?;
+                self.advance_ln();
+                Ok(node)
             }
             _ => {
                 context.trace(self.pos().clone(), &self.path);

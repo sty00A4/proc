@@ -301,7 +301,7 @@ pub fn lex(path: &String, text: &String, context: &mut Context) -> Result<Vec<Ve
                     if &line[col..col+1] == "/" {
                         col += 1;
                         while col < line.len() { col += 1 }
-                        continue
+                        break
                     }
                     if &line[col..col+1] == "=" {
                         col += 1;
