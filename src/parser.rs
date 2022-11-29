@@ -504,6 +504,20 @@ impl Parser {
                 // some weird shit is goinf on here with the operation function
                 Ok(node)
             }
+            T::VectorIn => {
+                let (start_ln, start_col) = (self.ln, self.col);
+                self.advance_line_break();
+                let mut nodes: Vec<Node> = vec![];
+                while self.token() != &T::VectorOut {
+                    let node = self.expr(context)?;
+                    self.advance_if(T::Sep, context);
+                    self.advance_if_line_break();
+                    nodes.push(node);
+                }
+                self.advance();
+                // some weird shit is going on here with the operation function
+                Ok(Node(N::Vector(nodes), Position::new(start_ln..self.ln+1, start_col..self.col)))
+            }
             T::ObjectIn => {
                 let (start_ln, start_col) = (self.ln, self.col);
                 self.advance_line_break();
