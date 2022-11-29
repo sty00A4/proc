@@ -165,7 +165,7 @@ pub struct Parser {
     path: String,
     col: usize,
     ln: usize,
-    layers: Vec<Layer>
+    layers: Vec<Layer>,
 }
 impl Parser {
     pub fn new(path: &String, tokens: Vec<Vec<Token>>) -> Self {
@@ -181,7 +181,7 @@ impl Parser {
                 Layer::UnaryRight(vec![T::Safe]),
                 Layer::Binary(vec![T::Option]),
                 Layer::Binary(vec![T::Field]),
-            ]
+            ],
         }
     }
     pub fn token(&self) -> &T {
@@ -205,10 +205,7 @@ impl Parser {
     pub fn advance(&mut self) { self.col += 1; }
     pub fn advance_ln(&mut self) { self.ln += 1; self.col = 0; }
     pub fn advance_expect(&mut self, token: T, context: &mut Context) -> Result<(), E> {
-        if self.token() != &token {
-            context.trace(self.pos().to_owned(), &self.path);
-            return Err(E::ExpectedToken(token, self.token().to_owned()))
-        }
+        self.expect(token, context)?;
         self.advance();
         Ok(())
     }
@@ -217,12 +214,7 @@ impl Parser {
     }
     pub fn advance_line_break(&mut self) {
         self.advance();
-        if self.token() == &T::EOL {
-            self.advance_ln();
-            if let T::Indent(_) = self.token() {
-                self.advance();
-            }
-        }
+        self.advance_if_line_break();
     }
     pub fn advance_if_line_break(&mut self) {
         if self.token() == &T::EOL {
@@ -525,7 +517,7 @@ impl Parser {
         Ok(node)
     }
     pub fn atom(&mut self, context: &mut Context) -> Result<Node, E> {
-        let ret: Result<Node, E> = match self.token() {
+        let node = match self.token() {
             T::Wildcard => Ok(Node(N::Wildcard, self.pos().to_owned())),
             T::Null => Ok(Node(N::Null, self.pos().to_owned())),
             T::Int(v) => Ok(Node(N::Int(*v), self.pos().to_owned())),
@@ -537,7 +529,6 @@ impl Parser {
             T::EvalIn => {
                 self.advance();
                 let node = self.expr(context)?;
-                // some weird shit is goinf on here with the operation function
                 Ok(node)
             }
             T::VectorIn => {
@@ -550,7 +541,6 @@ impl Parser {
                     self.advance_if_line_break();
                     nodes.push(node);
                 }
-                self.advance();
                 // some weird shit is going on here with the operation function
                 Ok(Node(N::Vector(nodes), Position::new(start_ln..self.ln+1, start_col..self.col)))
             }
@@ -566,7 +556,6 @@ impl Parser {
                     self.advance_if_line_break();
                     nodes.push((key, expr));
                 }
-                self.advance();
                 // some weird shit is going on here with the operation function
                 Ok(Node(N::Object(nodes), Position::new(start_ln..self.ln+1, start_col..self.col)))
             }
@@ -574,9 +563,9 @@ impl Parser {
                 context.trace(self.pos().to_owned(), &self.path);
                 Err(E::UnexpectedToken(self.token().to_owned()))
             }
-        };
+        }?;
         self.advance();
-        ret
+        Ok(node)
     }
 }
 
