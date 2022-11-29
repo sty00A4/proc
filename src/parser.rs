@@ -18,7 +18,8 @@ pub enum N {
     Call { id: Box<Node>, args: Vec<Node> },
     If { cond: Box<Node>, body: Box<Node>, else_body: Option<Box<Node>> }, While { cond: Box<Node>, body: Box<Node> },
     IfExpr { cond: Box<Node>, node: Box<Node>, else_node: Box<Node> },
-    Proc { name: Box<Node>, params: Vec<(Node, Option<Node>, Option<Node>)>, body: Box<Node> }
+    Proc { name: Box<Node>, params: Vec<(Node, Option<Node>, Option<Node>)>, body: Box<Node> },
+    Rule { name: Box<Node>, id: Box<Node>, rules: Vec<Node> },
 }
 impl std::fmt::Display for N {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -65,6 +66,7 @@ impl std::fmt::Display for N {
                     }
                 }
             ).collect::<Vec<String>>().join(" ")),
+            Self::Rule { name, id, rules } => write!(f, "rule {name} <- {id}; {}", rules.iter().map(|x| x.to_string()).collect::<Vec<String>>().join("; "))
         }
     }
 }
@@ -106,8 +108,8 @@ impl Node {
                 None => format!("if {} \n{}\n", cond.display(indent), body.display(indent + 1))
             },
             N::IfExpr { cond, node, else_node } => format!("{} if {} else {}", node.display(indent), cond.display(indent), else_node.display(indent)),
-            N::While { cond, body } => format!("while {} \n{}\n", cond.display(indent), body.display(indent + 1)),
-            N::Proc { name, params, body } => format!("proc {} <- {} \n{}\n", name.display(indent),
+            N::While { cond, body } => format!("{s}while {} \n{}", cond.display(indent), body.display(indent + 1)),
+            N::Proc { name, params, body } => format!("{s}proc {} <- {} \n{}", name.display(indent),
             params.iter().map(|(id, typ, default)|
                 match typ {
                     Some(typv) => match default {
@@ -120,6 +122,8 @@ impl Node {
                     }
                 }
             ).collect::<Vec<String>>().join(" "), body.display(indent + 1)),
+            N::Rule { name, id, rules } => format!("{s}rule {} <- {}\n{}",
+            name.display(indent), id.display(indent), rules.iter().map(|x| format!("{s}    {}", x.display(indent))).collect::<Vec<String>>().join("\n"))
         }
     }
 }
@@ -143,7 +147,7 @@ impl Parser {
             tokens, path: path.clone(), col: 0, ln: 0,
             layers: vec![
                 Layer::Binary(vec![T::And, T::Or, T::Xor]),
-                Layer::Binary(vec![T::EQ, T::NE, T::LT, T::LE, T::GT, T::GE]),
+                Layer::Binary(vec![T::EQ, T::NE, T::LT, T::LE, T::GT, T::GE, T::Is]),
                 Layer::Binary(vec![T::Add, T::Sub]),
                 Layer::Binary(vec![T::Mul, T::Div, T::Mod]),
                 Layer::UnaryLeft(vec![T::Add, T::Sub]),
@@ -409,9 +413,29 @@ impl Parser {
                     nodes.push(node);
                 }
                 let body = Node(N::Body(nodes), Position::new(body_start_ln..self.ln, body_start_col..self.col));
-                
                 Ok(Node(N::Proc {
                     name: Box::new(name), params, body: Box::new(body)
+                }, Position::new(start_ln..self.ln, start_col..self.col)))
+            }
+            T::Rule => {
+                let (start_ln, start_col) = (self.ln, self.col);
+                self.advance();
+                let name = self.atom(context)?;
+                self.advance_expect(T::In, context)?;
+                let id = self.atom(context)?;
+                self.expect(T::EOL, context)?;
+                self.advance_ln();
+                let mut rules: Vec<Node> = vec![];
+                while let T::Indent(i) = self.token() {
+                    if *i <= indent { break }
+                    self.advance();
+                    let node = self.expr(context)?;
+                    self.expect(T::EOL, context)?;
+                    rules.push(node);
+                    self.advance_ln();
+                }
+                Ok(Node(N::Rule {
+                    name: Box::new(name), id: Box::new(id), rules
                 }, Position::new(start_ln..self.ln, start_col..self.col)))
             }
             _ => {
