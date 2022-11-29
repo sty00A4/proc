@@ -15,7 +15,7 @@ pub enum N {
     Assign { global: bool, id: Box<Node>, expr: Box<Node> }, OpAssign { op: T, id: Box<Node>, expr: Box<Node> },
     Inc(Box<Node>), Dec(Box<Node>),
     Return(Box<Node>), Break, Continue,
-    Call { id: Box<Node>, args: Vec<Node> },
+    Call { id: Box<Node>, args: Vec<Node> }, CallExpr { id: Box<Node>, args: Vec<Node> },
     If { cond: Box<Node>, body: Box<Node>, else_body: Option<Box<Node>> }, While { cond: Box<Node>, body: Box<Node> },
     IfExpr { cond: Box<Node>, node: Box<Node>, else_node: Box<Node> },
     Proc { name: Box<Node>, params: Vec<(Node, Option<Node>, Option<Node>)>, body: Box<Node> },
@@ -24,21 +24,29 @@ pub enum N {
 impl std::fmt::Display for N {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Body(nodes) => write!(f, "{}", nodes.iter().map(|x| x.to_string()).collect::<Vec<String>>().join("; ")),
+            Self::Body(nodes) => write!(f, "{}", nodes.iter().map(|x| x.to_string())
+            .collect::<Vec<String>>().join("; ")),
             Self::Wildcard => write!(f, "_"),
             Self::Null => write!(f, "null"),
             Self::Int(v) => write!(f, "{v:?}"),
             Self::Float(v) => write!(f, "{v:?}"),
             Self::Bool(v) => write!(f, "{v:?}"),
             Self::String(v) => write!(f, "{v:?}"),
-            Self::Vector(v) => write!(f, "[{}]", v.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(", ")),
-            Self::Object(v) => write!(f, "{{ {} }}", v.iter().map(|(k, v)| format!("{k} = {v}")).collect::<Vec<String>>().join(", ")),
+            Self::Vector(v) => write!(f, "[{}]", v.iter().map(|x| x.to_string())
+            .collect::<Vec<String>>().join(", ")),
+            Self::Object(v) => write!(f, "{{ {} }}", v.iter().map(|(k, v)| format!("{k} = {v}"))
+            .collect::<Vec<String>>().join(", ")),
             Self::ID(v) => write!(f, "{v}"),
             Self::Type(v) => write!(f, "{v}"),
             Self::Binary { op, left, right } => write!(f, "{left} {op} {right}"),
             Self::Unary { op, node } => write!(f, "{op} {node}"),
-            Self::Multi { op, nodes } => write!(f, "{op} {}", nodes.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(" ")),
-            Self::Assign { global, id, expr } => if *global { write!(f, "global {id} = {expr}") } else { write!(f, "var {id} = {expr}") }
+            Self::Multi { op, nodes } => write!(f, "{op} {}", nodes.iter().map(|x| x.to_string())
+            .collect::<Vec<String>>().join(" ")),
+            Self::Assign { global, id, expr } => if *global {
+                write!(f, "global {id} = {expr}")
+            } else {
+                write!(f, "var {id} = {expr}")
+            }
             Self::OpAssign { op, id, expr } => write!(f, "{id} {op} {expr}"),
             Self::Inc(id) => write!(f, "{id}++"),
             Self::Dec(id) => write!(f, "{id}--"),
@@ -46,7 +54,10 @@ impl std::fmt::Display for N {
             Self::Break => write!(f, "break"),
             Self::Continue => write!(f, "continue"),
             Self::Dec(id) => write!(f, "{id}--"),
-            Self::Call { id, args } => write!(f, "{id}! {}", args.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(" ")),
+            Self::Call { id, args } => write!(f, "{id}! {}", args.iter().map(|x| x.to_string())
+            .collect::<Vec<String>>().join(", ")),
+            Self::CallExpr { id, args } => write!(f, "{id}({})", args.iter().map(|x| x.to_string())
+            .collect::<Vec<String>>().join(", ")),
             Self::If { cond, body, else_body } => match else_body {
                 Some(else_body) => write!(f, "if {cond} {body} else {else_body}"),
                 None => write!(f, "if {cond} {body}")
@@ -65,8 +76,9 @@ impl std::fmt::Display for N {
                         None => format!("{id}")
                     }
                 }
-            ).collect::<Vec<String>>().join(" ")),
-            Self::Rule { name, id, rules } => write!(f, "rule {name} <- {id}; {}", rules.iter().map(|x| x.to_string()).collect::<Vec<String>>().join("; "))
+            ).collect::<Vec<String>>().join(", ")),
+            Self::Rule { name, id, rules } => write!(f, "rule {name} <- {id}; {}", rules.iter().map(|x| x.to_string())
+            .collect::<Vec<String>>().join("; "))
         }
     }
 }
@@ -81,7 +93,8 @@ impl Node {
     pub fn display(&self, indent: usize) -> String {
         let s = String::from("    ").repeat(indent);
         match &self.0 {
-            N::Body(nodes) => format!("{}", nodes.iter().map(|x| format!("{}", x.display(indent))).collect::<Vec<String>>().join("\n")),
+            N::Body(nodes) => format!("{}", nodes.iter().map(|x| format!("{}", x.display(indent)))
+            .collect::<Vec<String>>().join("\n")),
             N::Wildcard => format!("_"),
             N::Null => format!("null"),
             N::Int(v) => format!("{v:?}"),
@@ -90,7 +103,8 @@ impl Node {
             N::String(v) => format!("{v:?}"),
             N::Vector(v) => format!("[{}]", v.iter().map(|x| x.display(indent)).collect::<Vec<String>>().join(", ")),
             N::Object(v) => format!("{{ {} }}",
-            v.iter().map(|(k, v)| format!("{} = {}", k.display(indent), v.display(indent))).collect::<Vec<String>>().join(", ")),
+            v.iter().map(|(k, v)| format!("{} = {}", k.display(indent), v.display(indent)))
+            .collect::<Vec<String>>().join(", ")),
             N::ID(v) => format!("{v}"),
             N::Type(v) => format!("{v}"),
             N::Binary { op, left, right } => format!("{} {op} {}", left.display(indent), right.display(indent)),
@@ -109,7 +123,9 @@ impl Node {
             N::Break => format!("{s}break"),
             N::Continue => format!("{s}continue"),
             N::Call { id, args } => format!("{s}{}! {}", id.display(indent),
-            args.iter().map(|x| x.display(indent)).collect::<Vec<String>>().join(" ")),
+            args.iter().map(|x| x.display(indent)).collect::<Vec<String>>().join(", ")),
+            N::CallExpr { id, args } => format!("{}({})", id.display(indent),
+            args.iter().map(|x| x.display(indent)).collect::<Vec<String>>().join(", ")),
             N::If { cond, body, else_body } => match else_body {
                 Some(else_body) => format!("{s}if {} \n{}\n{s}else\n{}", cond.display(indent),
                 body.display(indent + 1), else_body.display(indent + 1)),
@@ -276,7 +292,7 @@ impl Parser {
                 }
                 Ok(node)
             }
-            Layer::Atom => self.atom(context)
+            Layer::Atom => self.call(context)
         }
     }
     pub fn parse(&mut self, context: &mut Context) -> Result<Node, E> {
@@ -327,6 +343,7 @@ impl Parser {
                 let mut args: Vec<Node> = vec![];
                 while self.token() != &T::EOL {
                     let value = self.expr(context)?;
+                    self.advance_if(T::Sep, context);
                     args.push(value);
                 }
                 self.advance_ln();
@@ -485,6 +502,25 @@ impl Parser {
             return Ok(Node(N::IfExpr {
                 cond: Box::new(cond), node: Box::new(node), else_node: Box::new(else_node)
             }, Position::new(self.ln..self.ln+1, start..self.col)))
+        }
+        Ok(node)
+    }
+    pub fn call(&mut self, context: &mut Context) -> Result<Node, E> {
+        let node = self.atom(context)?;
+        if self.token() == &T::EvalIn {
+            let (start_ln, start_col) = (self.ln, self.col);
+            self.advance_line_break();
+            let mut args: Vec<Node> = vec![];
+            while self.token() != &T::EvalOut {
+                let arg = self.expr(context)?;
+                self.advance_if(T::Sep, context);
+                self.advance_if_line_break();
+                args.push(arg);
+            }
+            self.advance();
+            return Ok(Node(N::CallExpr {
+                id: Box::new(node), args
+            }, Position::new(start_ln..self.ln+1, start_col..self.col)))
         }
         Ok(node)
     }
