@@ -89,25 +89,34 @@ impl Node {
             N::Bool(v) => format!("{v:?}"),
             N::String(v) => format!("{v:?}"),
             N::Vector(v) => format!("[{}]", v.iter().map(|x| x.display(indent)).collect::<Vec<String>>().join(", ")),
-            N::Object(v) => format!("{{ {} }}", v.iter().map(|(k, v)| format!("{k} = {v}")).collect::<Vec<String>>().join(", ")),
+            N::Object(v) => format!("{{ {} }}",
+            v.iter().map(|(k, v)| format!("{} = {}", k.display(indent), v.display(indent))).collect::<Vec<String>>().join(", ")),
             N::ID(v) => format!("{v}"),
             N::Type(v) => format!("{v}"),
             N::Binary { op, left, right } => format!("{} {op} {}", left.display(indent), right.display(indent)),
             N::Unary { op, node } => format!("{op} {}", node.display(indent)),
-            N::Multi { op, nodes } => format!("{op} {}", nodes.iter().map(|x| x.display(indent)).collect::<Vec<String>>().join(" ")),
-            N::Assign { global, id, expr } => if *global { format!("{s}global {} = {}", id.display(indent), expr.display(indent)) } else { format!("{s}var {} = {}", id.display(indent), expr.display(indent)) }
+            N::Multi { op, nodes } => format!("{op} {}",
+            nodes.iter().map(|x| x.display(indent)).collect::<Vec<String>>().join(" ")),
+            N::Assign { global, id, expr } => if *global {
+                format!("{s}global {} = {}", id.display(indent), expr.display(indent))
+            } else {
+                format!("{s}var {} = {}", id.display(indent), expr.display(indent))
+            }
             N::OpAssign { op, id, expr } => format!("{s}{} {op} {}", id.display(indent), expr.display(indent)),
             N::Inc(id) => format!("{s}{}++", id.display(indent)),
             N::Dec(id) => format!("{s}{}--", id.display(indent)),
             N::Return(node) => format!("{s}return {}", node.display(indent)),
             N::Break => format!("{s}break"),
             N::Continue => format!("{s}continue"),
-            N::Call { id, args } => format!("{s}{}! {}", id.display(indent), args.iter().map(|x| x.display(indent)).collect::<Vec<String>>().join(" ")),
+            N::Call { id, args } => format!("{s}{}! {}", id.display(indent),
+            args.iter().map(|x| x.display(indent)).collect::<Vec<String>>().join(" ")),
             N::If { cond, body, else_body } => match else_body {
-                Some(else_body) => format!("{s}if {} \n{}\n{s}else\n{}", cond.display(indent), body.display(indent + 1), else_body.display(indent + 1)),
+                Some(else_body) => format!("{s}if {} \n{}\n{s}else\n{}", cond.display(indent),
+                body.display(indent + 1), else_body.display(indent + 1)),
                 None => format!("if {} \n{}\n", cond.display(indent), body.display(indent + 1))
             },
-            N::IfExpr { cond, node, else_node } => format!("{} if {} else {}", node.display(indent), cond.display(indent), else_node.display(indent)),
+            N::IfExpr { cond, node, else_node } => format!("{} if {} else {}", node.display(indent),
+            cond.display(indent), else_node.display(indent)),
             N::While { cond, body } => format!("{s}while {} \n{}", cond.display(indent), body.display(indent + 1)),
             N::Proc { name, params, body } => format!("{s}proc {} <- {} \n{}", name.display(indent),
             params.iter().map(|(id, typ, default)|
@@ -123,7 +132,8 @@ impl Node {
                 }
             ).collect::<Vec<String>>().join(" "), body.display(indent + 1)),
             N::Rule { name, id, rules } => format!("{s}rule {} <- {}\n{}",
-            name.display(indent), id.display(indent), rules.iter().map(|x| format!("{s}    {}", x.display(indent))).collect::<Vec<String>>().join("\n"))
+            name.display(indent), id.display(indent), rules.iter().map(|x| format!("{s}    {}", x.display(indent)))
+            .collect::<Vec<String>>().join("\n"))
         }
     }
 }
@@ -185,6 +195,26 @@ impl Parser {
         }
         self.advance();
         Ok(())
+    }
+    pub fn advance_if(&mut self, token: T, context: &mut Context) {
+        if self.token() == &token { self.advance(); }
+    }
+    pub fn advance_line_break(&mut self) {
+        self.advance();
+        if self.token() == &T::EOL {
+            self.advance_ln();
+            if let T::Indent(_) = self.token() {
+                self.advance();
+            }
+        }
+    }
+    pub fn advance_if_line_break(&mut self) {
+        if self.token() == &T::EOL {
+            self.advance_ln();
+            if let T::Indent(_) = self.token() {
+                self.advance();
+            }
+        }
     }
     pub fn expect(&mut self, token: T, context: &mut Context) -> Result<(), E> {
         if self.token() != &token {
@@ -473,6 +503,22 @@ impl Parser {
                 let node = self.expr(context)?;
                 // some weird shit is goinf on here with the operation function
                 Ok(node)
+            }
+            T::ObjectIn => {
+                let (start_ln, start_col) = (self.ln, self.col);
+                self.advance_line_break();
+                let mut nodes: Vec<(Node, Node)> = vec![];
+                while self.token() != &T::ObjectOut {
+                    let key = self.atom(context)?;
+                    self.advance_expect(T::Assign, context)?;
+                    let expr = self.expr(context)?;
+                    self.advance_if(T::Sep, context);
+                    self.advance_if_line_break();
+                    nodes.push((key, expr));
+                }
+                self.advance();
+                // some weird shit is going on here with the operation function
+                Ok(Node(N::Object(nodes), Position::new(start_ln..self.ln+1, start_col..self.col)))
             }
             _ => {
                 context.trace(self.pos().to_owned(), &self.path);
