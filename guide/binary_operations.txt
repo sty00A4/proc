@@ -1,0 +1,41 @@
+int        +    int       -> int
+int        +    float     -> float
+float      +    int       -> float
+float      +    float     -> float
+str        +    str       -> str          : concat
+
+int        -    int       -> int
+int        -    float     -> float
+float      -    int       -> float
+float      -    float     -> float
+
+int        *    int       -> int
+int        *    float     -> float
+float      *    int       -> float
+float      *    float     -> float
+str        *    int       -> str            : string repeated
+vec        *    int       -> vec            : value repeated
+
+int        /    int       -> float
+int        /    float     -> float
+float      /    int       -> float
+float      /    float     -> float
+
+int        %    int       -> int
+int        %    float     -> float
+float      %    int       -> float
+float      %    float     -> float
+
+any        is   type      -> bool
+
+any        in   vec       -> bool
+str        in   str       -> bool
+
+bool       and  bool      -> bool
+bool       and  any       -> any            : any if bool is true, else null
+
+bool       or   bool      -> bool
+undefined  or   any       -> any            : second any
+any        or   any       -> any            : first any
+
+bool       xor  bool      -> bool
