@@ -15,7 +15,7 @@ use lexer::*;
 use parser::*;
 use inter::*;
 
-fn run_context(path: &String, text: &String) -> Result<V, E> {
+fn run_context(path: &String, text: &String) -> Result<Option<V>, E> {
     let mut context = Context::new(path);
     let tokens = lex(path, text, &mut context)?;
     // for (ln, line) in tokens.iter().enumerate() {
@@ -25,10 +25,14 @@ fn run_context(path: &String, text: &String) -> Result<V, E> {
     // }
     let ast = parse(path, tokens, &mut context)?;
     // println!("{ast}");
-    println!("{}", ast.display(0));
-    Ok(V::Null)
+    // println!("{}", ast.display(0));
+    let (value, ret) = interpret(&ast, &mut context)?;
+    if ret == R::Return {
+        return Ok(Some(value))
+    }
+    Ok(None)
 }
-fn runfile_context(path: &String) -> Result<V, E> {
+fn runfile_context(path: &String) -> Result<Option<V>, E> {
     match std::fs::read_to_string(path.as_str()) {
         Ok(text) => run_context(path, &text),
         Err(e) => Err(E::TargetFile(path.clone())),
@@ -41,7 +45,10 @@ fn main() {
     args.next();
     match args.next() {
         Some(path) => match runfile_context(path) {
-            Ok(v) => {}
+            Ok(v) => match v {
+                Some(v) => println!("{v}"),
+                None => {}
+            }
             Err(e) => println!("{e}"),
         }
         None => return,

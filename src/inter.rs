@@ -6,6 +6,7 @@ use crate::value::*;
 use crate::lexer::*;
 use crate::parser::*;
 
+#[derive(Debug, Clone, PartialEq)]
 pub enum R { None, Return, Break, Continue }
 
 pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> {
@@ -21,6 +22,79 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
             let (left, _) = interpret(left, context)?;
             let (right, _) = interpret(right, context)?;
             match op {
+                T::Add => match left {
+                    V::Int(v1) => match right {
+                        V::Int(v2) => return Ok((V::Int(v1 + v2), R::None)),
+                        V::Float(v2) => return Ok((V::Float(v1 as f64 + v2), R::None)),
+                        _ => {}
+                    }
+                    V::Float(v1) => match right {
+                        V::Int(v2) => return Ok((V::Float(v1 + v2 as f64), R::None)),
+                        V::Float(v2) => return Ok((V::Float(v1 + v2), R::None)),
+                        _ => {}
+                    }
+                    V::String(ref v1) => match right {
+                        V::String(v2) => return Ok((V::String(v1.clone() + v2.as_str()), R::None)),
+                        _ => {}
+                    }
+                    _ => {}
+                }
+                T::Sub => match left {
+                    V::Int(v1) => match right {
+                        V::Int(v2) => return Ok((V::Int(v1 - v2), R::None)),
+                        V::Float(v2) => return Ok((V::Float(v1 as f64 - v2), R::None)),
+                        _ => {}
+                    }
+                    V::Float(v1) => match right {
+                        V::Int(v2) => return Ok((V::Float(v1 - v2 as f64), R::None)),
+                        V::Float(v2) => return Ok((V::Float(v1 - v2), R::None)),
+                        _ => {}
+                    }
+                    _ => {}
+                }
+                T::Mul => match left {
+                    V::Int(v1) => match right {
+                        V::Int(v2) => return Ok((V::Int(v1 * v2), R::None)),
+                        V::Float(v2) => return Ok((V::Float(v1 as f64 * v2), R::None)),
+                        _ => {}
+                    }
+                    V::Float(v1) => match right {
+                        V::Int(v2) => return Ok((V::Float(v1 * v2 as f64), R::None)),
+                        V::Float(v2) => return Ok((V::Float(v1 * v2), R::None)),
+                        _ => {}
+                    }
+                    V::String(ref v1) => match right {
+                        V::Int(v2) => return Ok((V::String(v1.repeat(v2 as usize)), R::None)),
+                        _ => {}
+                    }
+                    _ => {}
+                }
+                T::Div => match left {
+                    V::Int(v1) => match right {
+                        V::Int(v2) => return Ok((V::Float(v1 as f64 / v2 as f64), R::None)),
+                        V::Float(v2) => return Ok((V::Float(v1 as f64 / v2), R::None)),
+                        _ => {}
+                    }
+                    V::Float(v1) => match right {
+                        V::Int(v2) => return Ok((V::Float(v1 / v2 as f64), R::None)),
+                        V::Float(v2) => return Ok((V::Float(v1 / v2), R::None)),
+                        _ => {}
+                    }
+                    _ => {}
+                }
+                T::Mod => match left {
+                    V::Int(v1) => match right {
+                        V::Int(v2) => return Ok((V::Int(v1 % v2), R::None)),
+                        V::Float(v2) => return Ok((V::Float(v1 as f64 % v2), R::None)),
+                        _ => {}
+                    }
+                    V::Float(v1) => match right {
+                        V::Int(v2) => return Ok((V::Float(v1 % v2 as f64), R::None)),
+                        V::Float(v2) => return Ok((V::Float(v1 % v2), R::None)),
+                        _ => {}
+                    }
+                    _ => {}
+                }
                 _ => {
                     context.trace(pos.to_owned());
                     return Err(E::InvalidBinaryOp(op.to_owned()))
@@ -28,6 +102,17 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
             };
             context.trace(pos.to_owned());
             Err(E::Binary(op.clone(), left.clone(), right.clone()))
+        }
+        Node(N::Return(node), _) => {
+            let (value, _) = interpret(node, context)?;
+            Ok((value, R::Return))
+        }
+        Node(N::Body(nodes), _) => {
+            for n in nodes.iter() {
+                let (value, ret) = interpret(n, context)?;
+                if ret != R::None { return Ok((value, ret)) }
+            }
+            Ok((V::Null, R::None))
         }
         _ => Err(E::Todo(input_node.to_string()))
     }

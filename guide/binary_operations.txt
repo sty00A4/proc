@@ -14,7 +14,6 @@ int        *    float     -> float
 float      *    int       -> float
 float      *    float     -> float
 str        *    int       -> str            : string repeated
-vec        *    int       -> vec            : value repeated
 
 int        /    int       -> float
 int        /    float     -> float
