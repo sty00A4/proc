@@ -486,7 +486,7 @@ impl Parser {
             }
             _ => {
                 let node = self.operation(self.layers.last().unwrap().clone(), self.layers.len()-1, context)?;
-                if [T::Assign, T::AddAssign, T::SubAssign, T::MulAsssign, T::DivAssign, T::ModAssign].contains(&self.token()) {
+                if [T::Assign, T::AddAssign, T::SubAssign, T::MulAssign, T::DivAssign, T::ModAssign].contains(&self.token()) {
                     let op = self.token().to_owned();
                     self.advance();
                     let expr = self.expr(context)?;

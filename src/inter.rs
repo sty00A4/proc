@@ -237,6 +237,41 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                 }
             }
         }
+        Node(N::OpAssign { op, id: id_node, expr }, pos) => {
+            let (value, _) = interpret(expr, context)?;
+            let new_value = match id_node.as_ref() {
+                //                                this sucks, but it works
+                Node(N::ID(id), id_pos) => match (&mut context.clone()).get(id) {
+                    Some(old_value) => match op {
+                        T::Assign => Ok(value),
+                        T::AddAssign => binary(&T::Add, old_value, &value, pos, context),
+                        T::SubAssign => binary(&T::Sub, old_value, &value, pos, context),
+                        T::MulAssign => binary(&T::Mul, old_value, &value, pos, context),
+                        T::DivAssign => binary(&T::Div, old_value, &value, pos, context),
+                        T::ModAssign => binary(&T::Mod, old_value, &value, pos, context),
+                        _ => Ok(old_value.clone())
+                    }
+                    None => {
+                        context.trace(id_pos.clone());
+                        Err(E::NotDefined(id.clone()))
+                    }
+                }
+                _ => {
+                    context.trace(pos.clone());
+                    Err(E::CannotAssign(id_node.0.clone()))
+                }
+            }?;
+            match id_node.as_ref() {
+                Node(N::ID(id), id_pos) => {
+                    context.set(id, &new_value);
+                    Ok((V::Null, R::None))
+                }
+                _ => {
+                    context.trace(pos.clone());
+                    Err(E::CannotAssign(id_node.0.clone()))
+                }
+            }
+        }
         _ => Err(E::Todo(input_node.to_string()))
     }
 }

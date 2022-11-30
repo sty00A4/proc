@@ -24,7 +24,7 @@ pub enum T {
 //  +    -    *    /    %    ==  !=  <   >   <=  >=
     Add, Sub, Mul, Div, Mod, EQ, NE, LT, GT, LE, GE,
 //  +=         -=         *=          /=         %=
-    AddAssign, SubAssign, MulAsssign, DivAssign, ModAssign,
+    AddAssign, SubAssign, MulAssign, DivAssign, ModAssign,
 //  ++   --
     Inc, Dec,
 //      in
@@ -86,7 +86,7 @@ impl T {
             Self::GE => "'>='",
             Self::AddAssign => "'+='",
             Self::SubAssign => "'-='",
-            Self::MulAsssign => "'*='",
+            Self::MulAssign => "'*='",
             Self::DivAssign => "'/='",
             Self::ModAssign => "'%='",
             Self::Inc => "'++'",
@@ -294,7 +294,7 @@ pub fn lex(path: &String, text: &String, context: &mut Context) -> Result<Vec<Ve
                     col += 1;
                     if &line[col..col+1] == "=" {
                         col += 1;
-                        tokens[ln].push(Token(T::MulAsssign, Position::new(ln..ln+1, start..col)));
+                        tokens[ln].push(Token(T::MulAssign, Position::new(ln..ln+1, start..col)));
                         continue
                     }
                     tokens[ln].push(Token(T::Mul, Position::new(ln..ln+1, start..col)));
