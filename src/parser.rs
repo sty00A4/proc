@@ -514,6 +514,18 @@ impl Parser {
                 id: Box::new(node), args
             }, Position::new(start_ln..self.ln+1, start_col..self.col)))
         }
+        if self.token() == &T::ObjectIn {
+            let arg = self.atom(context)?;
+            return Ok(Node(N::CallExpr {
+                id: Box::new(node.clone()), args: vec![arg.clone()]
+            }, Position::new((node.1).0.start..(arg.1).0.end, (node.1).1.start..(arg.1).1.end)))
+        }
+        if let T::String(_) = self.token() {
+            let arg = self.atom(context)?;
+            return Ok(Node(N::CallExpr {
+                id: Box::new(node.clone()), args: vec![arg.clone()]
+            }, Position::new((node.1).0.start..(arg.1).0.end, (node.1).1.start..(arg.1).1.end)))
+        }
         Ok(node)
     }
     pub fn atom(&mut self, context: &mut Context) -> Result<Node, E> {
