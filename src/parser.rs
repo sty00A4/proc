@@ -21,6 +21,40 @@ pub enum N {
     Proc { name: Box<Node>, params: Vec<(Node, Option<Node>, Option<Node>)>, body: Box<Node> },
     Rule { name: Box<Node>, id: Box<Node>, rules: Vec<Node> },
 }
+impl N {
+    pub fn name(&self) -> &str {
+        match self {
+            Self::Body(_) => "body",
+            Self::Wildcard => "wildcard",
+            Self::Null => "null",
+            Self::Int(_) => "int",
+            Self::Float(_) => "float",
+            Self::Bool(_) => "bool",
+            Self::String(_) => "str",
+            Self::Vector(_) => "vec",
+            Self::Object(_) => "obj",
+            Self::ID(_) => "identifier",
+            Self::Type(_) => "type",
+            Self::Binary { op:_, left:_, right:_ } => "binary operation",
+            Self::Unary { op:_, node:_ } => "unary operation",
+            Self::Multi { op:_, nodes:_ } => "multi operation",
+            Self::Assign { global:_, id:_, expr:_ } => "assignment",
+            Self::OpAssign { op:_, id:_, expr:_ } => "operator assignment",
+            Self::Inc(_) => "incrementation",
+            Self::Dec(_) => "decrementation",
+            Self::Return(_) => "return",
+            Self::Break => "break",
+            Self::Continue => "continue",
+            Self::Call { id:_, args:_ } => "call",
+            Self::CallExpr { id:_, args:_ } => "call expression",
+            Self::If { cond:_, body:_, else_body:_ } => "if statement",
+            Self::While { cond:_, body:_ } => "while statement",
+            Self::IfExpr { cond:_, node:_, else_node:_ } => "if expression",
+            Self::Proc { name:_, params:_, body:_ } => "procedure definition",
+            Self::Rule { name:_, id:_, rules:_ } => "rule definition",
+        }
+    }
+}
 impl std::fmt::Display for N {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {

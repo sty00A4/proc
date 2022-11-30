@@ -111,6 +111,19 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
             }
             Ok((V::Vector(values, Type::create_union(types)), R::None))
         }
+        Node(N::Object(nodes), _) => {
+            let mut values: HashMap<String, V> = HashMap::new();
+            for (key_node, node) in nodes.iter() {
+                if let Node(N::ID(key_str), _) = key_node {
+                    let (v, _) = interpret(node, context)?;
+                    values.insert(key_str.clone(), v);
+                } else {
+                    context.trace(key_node.1.clone());
+                    return Err(E::ExpectedNode(N::ID("".into()), key_node.0.clone()))
+                }
+            }
+            Ok((V::Object(values), R::None))
+        }
         Node(N::Type(v), _) => Ok((V::Type(v.to_owned()), R::None)),
         Node(N::Binary { op, left, right }, pos) => {
             let (left, _) = interpret(left, context)?;

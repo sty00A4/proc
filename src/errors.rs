@@ -1,5 +1,4 @@
-use crate::T;
-use crate::V;
+use crate::*;
 
 #[derive(Clone, Debug)]
 pub enum E {
@@ -9,6 +8,8 @@ pub enum E {
     IllegalChar(String),
     UnexpectedToken(T),
     ExpectedToken(T, T),
+    ExpectedType(Type, Type),
+    ExpectedNode(N, N),
     Binary(T, V, V),
     InvalidBinaryOp(T),
 }
@@ -21,6 +22,8 @@ impl std::fmt::Display for E {
             Self::IllegalChar(c) => write!(f, "ERROR: illegal character {c:?}"),
             Self::UnexpectedToken(t) => write!(f, "ERROR: unexpected {}", t.name()),
             Self::ExpectedToken(t1, t2) => write!(f, "ERROR: expected {}, got {}", t1.name(), t2.name()),
+            Self::ExpectedType(t1, t2) => write!(f, "ERROR: expected {t1}, got {t2}"),
+            Self::ExpectedNode(n1, n2) => write!(f, "ERROR: expected {}, got {}", n1.name(), n2.name()),
             Self::Binary(op, left, right) => write!(f, "ERROR: cannot perform {} on {} and {}", op.name(), left.typ(), right.typ()),
             Self::InvalidBinaryOp(op) => write!(f, "ERROR: invalid binary operator {}", op.name()),
         }
