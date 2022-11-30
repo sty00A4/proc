@@ -19,7 +19,7 @@ impl std::fmt::Display for V {
             Self::String(v) => write!(f, "{v}"),
             Self::Tuple(v) => write!(f, "({})", v.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(", ")),
             Self::Vector(v, _) => write!(f, "{v:?}"),
-            Self::Object(v) => write!(f, "obj:{:?}", v as *const HashMap<String, V>),
+            Self::Object(v) => write!(f, "{{ {} }}", v.iter().map(|(k, v)| format!("{k} = {v}")).collect::<Vec<String>>().join(", ")),
             Self::Type(v) => write!(f, "{v}"),
         }
     }
