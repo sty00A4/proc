@@ -101,6 +101,16 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
         Node(N::Float(v), _) => Ok((V::Float(*v), R::None)),
         Node(N::Bool(v), _) => Ok((V::Bool(*v), R::None)),
         Node(N::String(v), _) => Ok((V::String(v.to_owned()), R::None)),
+        Node(N::Vector(nodes), _) => {
+            let mut values: Vec<V> = vec![];
+            let mut types: Vec<Type> = vec![];
+            for n in nodes.iter() {
+                let (v, _) = interpret(n, context)?;
+                types.push(v.typ());
+                values.push(v);
+            }
+            Ok((V::Vector(values, Type::create_union(types)), R::None))
+        }
         Node(N::Type(v), _) => Ok((V::Type(v.to_owned()), R::None)),
         Node(N::Binary { op, left, right }, pos) => {
             let (left, _) = interpret(left, context)?;

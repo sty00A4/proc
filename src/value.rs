@@ -115,6 +115,13 @@ pub enum Type {
     Type,
     Union(Vec<Type>), Scission(Vec<Type>)
 }
+impl Type {
+    pub fn create_union(types: Vec<Self>) -> Self {
+        let mut collected: Vec<Self> = vec![];
+        for t in types { if !collected.contains(&t) { collected.push(t); } }
+        Self::Union(collected)
+    }
+}
 impl std::fmt::Display for Type {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{self:?}")
