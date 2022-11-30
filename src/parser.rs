@@ -312,37 +312,6 @@ impl Parser {
                     global: prefix == T::Global, id: Box::new(id), expr: Box::new(expr)
                 }, Position::new(self.ln..self.ln+1, start..self.col)))
             }
-            T::ID(_) => {
-                let id = self.operation(self.layers.last().unwrap().clone(), self.layers.len()-1, context)?;
-                if [T::AddAssign, T::SubAssign, T::MulAsssign, T::DivAssign, T::ModAssign].contains(&self.token()) {
-                    let op = self.token().to_owned();
-                    self.advance();
-                    let expr = self.expr(context)?;
-                    self.advance_ln();
-                    return Ok(Node(N::OpAssign {
-                        op, id: Box::new(id), expr: Box::new(expr)
-                    }, Position::new(self.ln..self.ln+1, start..self.col)))
-                }
-                if self.token() == &T::Inc {
-                    self.advance_ln();
-                    return Ok(Node(N::Inc(Box::new(id)), Position::new(self.ln..self.ln+1, start..self.col)))
-                }
-                if self.token() == &T::Dec {
-                    self.advance_ln();
-                    return Ok(Node(N::Dec(Box::new(id)), Position::new(self.ln..self.ln+1, start..self.col)))
-                }
-                self.advance_expect(T::Call, context)?;
-                let mut args: Vec<Node> = vec![];
-                while self.token() != &T::EOL {
-                    let value = self.expr(context)?;
-                    self.advance_if(T::Sep, context);
-                    args.push(value);
-                }
-                self.advance_ln();
-                Ok(Node(N::Call {
-                    id: Box::new(id), args
-                }, Position::new(self.ln..self.ln+1, start..self.col)))
-            }
             T::If => {
                 let (start_ln, start_col) = (self.ln, self.col);
                 self.advance();
@@ -478,8 +447,35 @@ impl Parser {
                 }, Position::new(start_ln..self.ln, start_col..self.col)))
             }
             _ => {
-                context.trace(self.pos().to_owned(), &self.path);
-                Err(E::UnexpectedToken(self.token().to_owned()))
+                let node = self.operation(self.layers.last().unwrap().clone(), self.layers.len()-1, context)?;
+                if [T::Assign, T::AddAssign, T::SubAssign, T::MulAsssign, T::DivAssign, T::ModAssign].contains(&self.token()) {
+                    let op = self.token().to_owned();
+                    self.advance();
+                    let expr = self.expr(context)?;
+                    self.advance_ln();
+                    return Ok(Node(N::OpAssign {
+                        op, id: Box::new(node), expr: Box::new(expr)
+                    }, Position::new(self.ln..self.ln+1, start..self.col)))
+                }
+                if self.token() == &T::Inc {
+                    self.advance_ln();
+                    return Ok(Node(N::Inc(Box::new(node)), Position::new(self.ln..self.ln+1, start..self.col)))
+                }
+                if self.token() == &T::Dec {
+                    self.advance_ln();
+                    return Ok(Node(N::Dec(Box::new(node)), Position::new(self.ln..self.ln+1, start..self.col)))
+                }
+                self.advance_expect(T::Call, context)?;
+                let mut args: Vec<Node> = vec![];
+                while self.token() != &T::EOL {
+                    let value = self.expr(context)?;
+                    self.advance_if(T::Sep, context);
+                    args.push(value);
+                }
+                self.advance_ln();
+                Ok(Node(N::Call {
+                    id: Box::new(node), args
+                }, Position::new(self.ln..self.ln+1, start..self.col)))
             }
         }
     }
