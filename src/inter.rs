@@ -9,6 +9,90 @@ use crate::parser::*;
 #[derive(Debug, Clone, PartialEq)]
 pub enum R { None, Return, Break, Continue }
 
+pub fn binary(op: &T, left: &V, right: &V, pos: &Position, context: &mut Context) -> Result<V, E> {
+    match op {
+        T::Add => match left {
+            V::Int(v1) => match right {
+                V::Int(v2) => return Ok(V::Int(*v1 + *v2)),
+                V::Float(v2) => return Ok(V::Float(*v1 as f64 + v2)),
+                _ => {}
+            }
+            V::Float(v1) => match right {
+                V::Int(v2) => return Ok(V::Float(*v1 + *v2 as f64)),
+                V::Float(v2) => return Ok(V::Float(*v1 + *v2)),
+                _ => {}
+            }
+            V::String(v1) => match right {
+                V::String(v2) => return Ok(V::String(v1.clone() + v2.as_str())),
+                _ => {}
+            }
+            _ => {}
+        }
+        T::Sub => match left {
+            V::Int(v1) => match right {
+                V::Int(v2) => return Ok(V::Int(*v1 - *v2)),
+                V::Float(v2) => return Ok(V::Float(*v1 as f64 - *v2)),
+                _ => {}
+            }
+            V::Float(v1) => match right {
+                V::Int(v2) => return Ok(V::Float(*v1 - *v2 as f64)),
+                V::Float(v2) => return Ok(V::Float(*v1 - *v2)),
+                _ => {}
+            }
+            _ => {}
+        }
+        T::Mul => match left {
+            V::Int(v1) => match right {
+                V::Int(v2) => return Ok(V::Int(*v1 * *v2)),
+                V::Float(v2) => return Ok(V::Float(*v1 as f64 * *v2)),
+                _ => {}
+            }
+            V::Float(v1) => match right {
+                V::Int(v2) => return Ok(V::Float(v1 * *v2 as f64)),
+                V::Float(v2) => return Ok(V::Float(v1 * v2)),
+                _ => {}
+            }
+            V::String(v1) => match right {
+                V::Int(v2) => return Ok(V::String(v1.repeat(*v2 as usize))),
+                _ => {}
+            }
+            _ => {}
+        }
+        T::Div => match left {
+            V::Int(v1) => match right {
+                V::Int(v2) => return Ok(V::Float(*v1 as f64 / *v2 as f64)),
+                V::Float(v2) => return Ok(V::Float(*v1 as f64 / *v2)),
+                _ => {}
+            }
+            V::Float(v1) => match right {
+                V::Int(v2) => return Ok(V::Float(*v1 / *v2 as f64)),
+                V::Float(v2) => return Ok(V::Float(*v1 / *v2)),
+                _ => {}
+            }
+            _ => {}
+        }
+        T::Mod => match left {
+            V::Int(v1) => match right {
+                V::Int(v2) => return Ok(V::Int(*v1 % *v2)),
+                V::Float(v2) => return Ok(V::Float(*v1 as f64 % *v2)),
+                _ => {}
+            }
+            V::Float(v1) => match right {
+                V::Int(v2) => return Ok(V::Float(*v1 % *v2 as f64)),
+                V::Float(v2) => return Ok(V::Float(*v1 % *v2)),
+                _ => {}
+            }
+            _ => {}
+        }
+        _ => {
+            context.trace(pos.to_owned());
+            return Err(E::InvalidBinaryOp(op.to_owned()))
+        }
+    };
+    context.trace(pos.to_owned());
+    Err(E::Binary(op.clone(), left.clone(), right.clone()))
+}
+
 pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> {
     match input_node {
         Node(N::Wildcard, _) => Ok((V::Wildcard, R::None)),
@@ -21,87 +105,8 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
         Node(N::Binary { op, left, right }, pos) => {
             let (left, _) = interpret(left, context)?;
             let (right, _) = interpret(right, context)?;
-            match op {
-                T::Add => match left {
-                    V::Int(v1) => match right {
-                        V::Int(v2) => return Ok((V::Int(v1 + v2), R::None)),
-                        V::Float(v2) => return Ok((V::Float(v1 as f64 + v2), R::None)),
-                        _ => {}
-                    }
-                    V::Float(v1) => match right {
-                        V::Int(v2) => return Ok((V::Float(v1 + v2 as f64), R::None)),
-                        V::Float(v2) => return Ok((V::Float(v1 + v2), R::None)),
-                        _ => {}
-                    }
-                    V::String(ref v1) => match right {
-                        V::String(v2) => return Ok((V::String(v1.clone() + v2.as_str()), R::None)),
-                        _ => {}
-                    }
-                    _ => {}
-                }
-                T::Sub => match left {
-                    V::Int(v1) => match right {
-                        V::Int(v2) => return Ok((V::Int(v1 - v2), R::None)),
-                        V::Float(v2) => return Ok((V::Float(v1 as f64 - v2), R::None)),
-                        _ => {}
-                    }
-                    V::Float(v1) => match right {
-                        V::Int(v2) => return Ok((V::Float(v1 - v2 as f64), R::None)),
-                        V::Float(v2) => return Ok((V::Float(v1 - v2), R::None)),
-                        _ => {}
-                    }
-                    _ => {}
-                }
-                T::Mul => match left {
-                    V::Int(v1) => match right {
-                        V::Int(v2) => return Ok((V::Int(v1 * v2), R::None)),
-                        V::Float(v2) => return Ok((V::Float(v1 as f64 * v2), R::None)),
-                        _ => {}
-                    }
-                    V::Float(v1) => match right {
-                        V::Int(v2) => return Ok((V::Float(v1 * v2 as f64), R::None)),
-                        V::Float(v2) => return Ok((V::Float(v1 * v2), R::None)),
-                        _ => {}
-                    }
-                    V::String(ref v1) => match right {
-                        V::Int(v2) => return Ok((V::String(v1.repeat(v2 as usize)), R::None)),
-                        _ => {}
-                    }
-                    _ => {}
-                }
-                T::Div => match left {
-                    V::Int(v1) => match right {
-                        V::Int(v2) => return Ok((V::Float(v1 as f64 / v2 as f64), R::None)),
-                        V::Float(v2) => return Ok((V::Float(v1 as f64 / v2), R::None)),
-                        _ => {}
-                    }
-                    V::Float(v1) => match right {
-                        V::Int(v2) => return Ok((V::Float(v1 / v2 as f64), R::None)),
-                        V::Float(v2) => return Ok((V::Float(v1 / v2), R::None)),
-                        _ => {}
-                    }
-                    _ => {}
-                }
-                T::Mod => match left {
-                    V::Int(v1) => match right {
-                        V::Int(v2) => return Ok((V::Int(v1 % v2), R::None)),
-                        V::Float(v2) => return Ok((V::Float(v1 as f64 % v2), R::None)),
-                        _ => {}
-                    }
-                    V::Float(v1) => match right {
-                        V::Int(v2) => return Ok((V::Float(v1 % v2 as f64), R::None)),
-                        V::Float(v2) => return Ok((V::Float(v1 % v2), R::None)),
-                        _ => {}
-                    }
-                    _ => {}
-                }
-                _ => {
-                    context.trace(pos.to_owned());
-                    return Err(E::InvalidBinaryOp(op.to_owned()))
-                }
-            };
-            context.trace(pos.to_owned());
-            Err(E::Binary(op.clone(), left.clone(), right.clone()))
+            let res = binary(op, &left, &right, pos, context)?;
+            Ok((res, R::None))
         }
         Node(N::Return(node), _) => {
             let (value, _) = interpret(node, context)?;
