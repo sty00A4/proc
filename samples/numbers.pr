@@ -9,3 +9,11 @@ rule even <- x
 rule odd <- x
     x is number
     x % 2 != 0
+
+proc test
+    assert! 1 is natural
+    assert! not -5 is natural
+    assert! 8 is even
+    assert! not 3 is even
+    assert! 5 is odd
+    assert! not 4 is odd

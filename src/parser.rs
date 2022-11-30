@@ -173,6 +173,7 @@ impl Parser {
             tokens, path: path.clone(), col: 0, ln: 0,
             layers: vec![
                 Layer::Binary(vec![T::And, T::Or, T::Xor]),
+                Layer::UnaryLeft(vec![T::Not]),
                 Layer::Binary(vec![T::EQ, T::NE, T::LT, T::LE, T::GT, T::GE, T::Is]),
                 Layer::Binary(vec![T::Add, T::Sub]),
                 Layer::Binary(vec![T::Mul, T::Div, T::Mod]),

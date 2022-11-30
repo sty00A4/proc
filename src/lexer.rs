@@ -28,7 +28,7 @@ pub enum T {
 //  ++   --
     Inc, Dec,
 //      in
-    Is, Contains, And, Or, Xor,
+    Is, Contains, And, Or, Xor, Not,
 //  _
     Wildcard, Null,
     Int(i64), Float(f64), Bool(bool), String(String),
@@ -96,6 +96,7 @@ impl T {
             Self::And => "'and'",
             Self::Or => "'or'",
             Self::Xor => "'xor'",
+            Self::Not => "'not'",
             Self::Wildcard => "wildcard",
             Self::Null => "null",
             Self::Int(_) => "int",
