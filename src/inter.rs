@@ -119,6 +119,7 @@ pub fn unary(op: &T, value: &V, pos: &Position, context: &mut Context) -> Result
 
 pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> {
     match input_node {
+        // atom
         Node(N::Wildcard, _) => Ok((V::Wildcard, R::None)),
         Node(N::Null, _) => Ok((V::Null, R::None)),
         Node(N::Int(v), _) => Ok((V::Int(*v), R::None)),
@@ -150,6 +151,7 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
         }
         Node(N::Type(v), _) => Ok((V::Type(v.to_owned()), R::None)),
 
+        // operations
         Node(N::Binary { op, left, right }, pos) => {
             let (left, _) = interpret(left, context)?;
             let (right, _) = interpret(right, context)?;
@@ -191,6 +193,7 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
             }
         }
 
+        // structure
         Node(N::Return(node), _) => {
             let (value, _) = interpret(node, context)?;
             Ok((value, R::Return))
