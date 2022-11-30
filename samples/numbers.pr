@@ -1,0 +1,11 @@
+rule number <- x
+    x is int|float
+rule natural <- x
+    x is number
+    x >= 0
+rule even <- x
+    x is number
+    x % 2 == 0
+rule odd <- x
+    x is number
+    x % 2 != 0
