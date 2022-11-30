@@ -90,12 +90,29 @@ impl PartialEq for V {
         }
     }
 }
+impl V {
+    pub fn typ(&self) -> Type {
+        match self {
+            Self::Wildcard => Type::Any,
+            Self::Null => Type::Undefiend,
+            Self::Int(_) => Type::Int,
+            Self::Float(_) => Type::Float,
+            Self::Bool(_) => Type::Bool,
+            Self::String(_) => Type::String,
+            Self::Tuple(v) => Type::Tuple(v.iter().map(|x| x.typ()).collect()),
+            Self::Vector(_, t) => t.clone(),
+            Self::Object(_) => Type::Object,
+            Self::Type(_) => Type::Type,
+        }
+    }
+}
 
 #[derive(Clone)]
 pub enum Type {
     Any, Undefiend,
     Int, Float, Bool, String,
     Tuple(Vec<Type>), Vector(Box<Type>), Object,
+    Type,
     Union(Vec<Type>), Scission(Vec<Type>)
 }
 impl std::fmt::Display for Type {
@@ -115,6 +132,7 @@ impl std::fmt::Debug for Type {
             Self::Tuple(types) => write!(f, "({})", types.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(", ")),
             Self::Vector(t) => write!(f, "vec"),
             Self::Object => write!(f, "obj"),
+            Self::Type => write!(f, "type"),
             Self::Union(types) => write!(f, "union[{}]", types.iter().map(|x| x.to_string()).collect::<Vec<String>>().join("|")),
             Self::Scission(types) => write!(f, "scission[{}]", types.iter().map(|x| x.to_string()).collect::<Vec<String>>().join("|")),
         }
@@ -175,6 +193,13 @@ impl PartialEq for Type {
             }
             Self::Object => match other {
                 Self::Object => true,
+                Self::Any => true,
+                Self::Union(_) => other == self,
+                Self::Scission(_) => other == self,
+                _ => false
+            }
+            Self::Type => match other {
+                Self::Type => true,
                 Self::Any => true,
                 Self::Union(_) => other == self,
                 Self::Scission(_) => other == self,
