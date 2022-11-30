@@ -161,6 +161,35 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
             let res = unary(op, &value, pos, context)?;
             Ok((res, R::None))
         }
+        Node(N::Multi { op, nodes }, pos) => {
+            match nodes.len() {
+                0 => Ok((V::Null, R::None)),
+                1 => {
+                    let (value, _) = interpret(&nodes[0], context)?;
+                    let res = unary(op, &value, pos, context)?;
+                    Ok((res, R::None))
+                }
+                2 => {
+                    let (left, _) = interpret(&nodes[0], context)?;
+                    let (right, _) = interpret(&nodes[1], context)?;
+                    let res = binary(op, &left, &right, pos, context)?;
+                    Ok((res, R::None))
+                }
+                _ => {
+                    match op {
+                        // todo: comp
+                        _ => {
+                            let (mut value, _) = interpret(&nodes[0], context)?;
+                            for i in 1..nodes.len() {
+                                let (v, _) = interpret(&nodes[i], context)?;
+                                value = binary(op, &value, &v, pos, context)?;
+                            }
+                            Ok((value, R::None))
+                        }
+                    }
+                }
+            }
+        }
 
         Node(N::Return(node), _) => {
             let (value, _) = interpret(node, context)?;
