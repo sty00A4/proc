@@ -184,7 +184,7 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                             let (mut value, _) = interpret(&nodes[0], context)?;
                             for i in 1..nodes.len() {
                                 let (v, _) = interpret(&nodes[i], context)?;
-                                value = binary(op, &value, &v, pos, context)?;
+                                value = binary(op, &value, &v, &nodes[i].1, context)?;
                             }
                             Ok((value, R::None))
                         }
