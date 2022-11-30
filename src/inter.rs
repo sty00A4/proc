@@ -272,6 +272,58 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                 }
             }
         }
+        Node(N::Inc(id_node), pos) => {
+            let new_value = match id_node.as_ref() {
+                //                                this sucks, but it works
+                Node(N::ID(id), id_pos) => match (&mut context.clone()).get(id) {
+                    Some(old_value) => binary(&T::Add, old_value, &V::Int(1), pos, context),
+                    None => {
+                        context.trace(id_pos.clone());
+                        Err(E::NotDefined(id.clone()))
+                    }
+                }
+                _ => {
+                    context.trace(pos.clone());
+                    Err(E::CannotAssign(id_node.0.clone()))
+                }
+            }?;
+            match id_node.as_ref() {
+                Node(N::ID(id), id_pos) => {
+                    context.set(id, &new_value);
+                    Ok((V::Null, R::None))
+                }
+                _ => {
+                    context.trace(pos.clone());
+                    Err(E::CannotAssign(id_node.0.clone()))
+                }
+            }
+        }
+        Node(N::Dec(id_node), pos) => {
+            let new_value = match id_node.as_ref() {
+                //                                this sucks, but it works
+                Node(N::ID(id), id_pos) => match (&mut context.clone()).get(id) {
+                    Some(old_value) => binary(&T::Sub, old_value, &V::Int(1), pos, context),
+                    None => {
+                        context.trace(id_pos.clone());
+                        Err(E::NotDefined(id.clone()))
+                    }
+                }
+                _ => {
+                    context.trace(pos.clone());
+                    Err(E::CannotAssign(id_node.0.clone()))
+                }
+            }?;
+            match id_node.as_ref() {
+                Node(N::ID(id), id_pos) => {
+                    context.set(id, &new_value);
+                    Ok((V::Null, R::None))
+                }
+                _ => {
+                    context.trace(pos.clone());
+                    Err(E::CannotAssign(id_node.0.clone()))
+                }
+            }
+        }
         _ => Err(E::Todo(input_node.to_string()))
     }
 }
