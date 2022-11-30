@@ -121,6 +121,7 @@ pub fn lex(path: &String, text: &String, context: &mut Context) -> Result<Vec<Ve
     for (ln, line) in text.split("\n").enumerate() {
         tokens.push(vec![]);
         let mut col: usize = 0;
+        if col == line.len() { continue }
         if [" ", "\t"].contains(&&line[col..col+1]) {
             let start = col;
             let mut indent: u16 = 0;
@@ -397,7 +398,10 @@ pub fn lex(path: &String, text: &String, context: &mut Context) -> Result<Vec<Ve
                 }
             }
         }
-        tokens[ln].push(Token(T::EOL, Position::new(ln..ln+1, col..col))); // end of line
+        match tokens.get_mut(ln) {
+            Some(tokens_) => tokens_.push(Token(T::EOL, Position::new(ln..ln+1, col..col))),
+            None => {},
+        };
     }
     tokens.push(vec![Token(T::EOF, Position::new(tokens.len()-1..tokens.len(), 0..0))]); // end of file
     Ok(tokens)

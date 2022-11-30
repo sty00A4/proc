@@ -13,7 +13,7 @@ use context::*;
 use lexer::*;
 use parser::*;
 
-fn runfile_context(path: &String, text: &String) -> Result<V, E> {
+fn run_context(path: &String, text: &String) -> Result<V, E> {
     let mut context = Context::new();
     let tokens = lex(path, text, &mut context)?;
     // for (ln, line) in tokens.iter().enumerate() {
@@ -22,9 +22,15 @@ fn runfile_context(path: &String, text: &String) -> Result<V, E> {
     //     println!();
     // }
     let ast = parse(path, tokens, &mut context)?;
-    println!("{ast}");
+    // println!("{ast}");
     println!("{}", ast.display(0));
     Ok(V::Null)
+}
+fn runfile_context(path: &String) -> Result<V, E> {
+    match std::fs::read_to_string(path.as_str()) {
+        Ok(text) => run_context(path, &text),
+        Err(e) => Err(E::TargetFile(path.clone())),
+    }
 }
 
 fn main() {
@@ -32,12 +38,9 @@ fn main() {
     let mut args = args_.iter_mut();
     args.next();
     match args.next() {
-        Some(path) => match std::fs::read_to_string(path.as_str()) {
-            Ok(text) => match runfile_context(path, &text) {
-                Ok(v) => {}
-                Err(e) => println!("{e}"),
-            }
-            Err(e) => println!("ERROR: {e}"),
+        Some(path) => match runfile_context(path) {
+            Ok(v) => {}
+            Err(e) => println!("{e}"),
         }
         None => return,
     }
@@ -47,11 +50,13 @@ fn main() {
 mod tests {
     use std::collections::HashSet;
 
+    use crate::*;
     use crate::position::*;
     use crate::errors::*;
     use crate::value::*;
     use crate::context::*;
     use crate::lexer::*;
+    use crate::parser::*;
 
     #[test]
     fn type_checking() {
@@ -64,5 +69,10 @@ mod tests {
         assert!(Type::Int == Type::Scission(vec![Type::String]));
         assert!(Type::Int != Type::Scission(vec![Type::Int, Type::Float]));
         assert!(Type::Scission(vec![Type::Int, Type::Float]) != Type::Int);
+    }
+    #[test]
+    fn samples_numbers() -> Result<(), E> {
+        runfile_context(&String::from("samples/numbers.pr"))?;
+        Ok(())
     }
 }

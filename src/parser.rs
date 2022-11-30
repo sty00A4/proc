@@ -189,7 +189,10 @@ impl Parser {
         match self.tokens.get(self.ln) {
             Some(line) => match line.get(self.col) {
                 Some(token) => &token.0,
-                None => &line.last().unwrap().0
+                None => match &line.last() {
+                    Some(token) => &token.0,
+                    None => &T::EOL
+                }
             }
             None => &self.tokens.last().unwrap().last().unwrap().0
         }
