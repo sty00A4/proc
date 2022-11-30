@@ -48,8 +48,8 @@ pub fn binary(op: &T, left: &V, right: &V, pos: &Position, context: &mut Context
                 _ => {}
             }
             V::Float(v1) => match right {
-                V::Int(v2) => return Ok(V::Float(v1 * *v2 as f64)),
-                V::Float(v2) => return Ok(V::Float(v1 * v2)),
+                V::Int(v2) => return Ok(V::Float(*v1 * *v2 as f64)),
+                V::Float(v2) => return Ok(V::Float(*v1 * *v2)),
                 _ => {}
             }
             V::String(v1) => match right {
