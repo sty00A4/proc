@@ -92,6 +92,30 @@ pub fn binary(op: &T, left: &V, right: &V, pos: &Position, context: &mut Context
     context.trace(pos.to_owned());
     Err(E::Binary(op.clone(), left.clone(), right.clone()))
 }
+pub fn unary(op: &T, value: &V, pos: &Position, context: &mut Context) -> Result<V, E> {
+    match op {
+        T::Sub => match value {
+            V::Int(v) => return Ok(V::Int(-v)),
+            V::Float(v) => return Ok(V::Float(-v)),
+            _ => {}
+        }
+        T::Len => match value {
+            V::String(v) => return Ok(V::Int(v.len() as i64)),
+            V::Vector(v, _) => return Ok(V::Int(v.len() as i64)),
+            _ => {}
+        }
+        T::Not => match value {
+            V::Bool(v) => return Ok(V::Bool(!v)),
+            _ => {}
+        }
+        _ => {
+            context.trace(pos.clone());
+            return Err(E::InvalidUnaryOp(op.clone()))
+        }
+    };
+    context.trace(pos.clone());
+    Err(E::Unary(op.clone(), value.clone()))
+}
 
 pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> {
     match input_node {
@@ -125,12 +149,19 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
             Ok((V::Object(values), R::None))
         }
         Node(N::Type(v), _) => Ok((V::Type(v.to_owned()), R::None)),
+
         Node(N::Binary { op, left, right }, pos) => {
             let (left, _) = interpret(left, context)?;
             let (right, _) = interpret(right, context)?;
             let res = binary(op, &left, &right, pos, context)?;
             Ok((res, R::None))
         }
+        Node(N::Unary { op, node }, pos) => {
+            let (value, _) = interpret(node, context)?;
+            let res = unary(op, &value, pos, context)?;
+            Ok((res, R::None))
+        }
+
         Node(N::Return(node), _) => {
             let (value, _) = interpret(node, context)?;
             Ok((value, R::Return))

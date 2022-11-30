@@ -12,6 +12,8 @@ pub enum E {
     ExpectedNode(N, N),
     Binary(T, V, V),
     InvalidBinaryOp(T),
+    Unary(T, V),
+    InvalidUnaryOp(T),
 }
 impl std::fmt::Display for E {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -26,6 +28,8 @@ impl std::fmt::Display for E {
             Self::ExpectedNode(n1, n2) => write!(f, "ERROR: expected {}, got {}", n1.name(), n2.name()),
             Self::Binary(op, left, right) => write!(f, "ERROR: cannot perform {} on {} and {}", op.name(), left.typ(), right.typ()),
             Self::InvalidBinaryOp(op) => write!(f, "ERROR: invalid binary operator {}", op.name()),
+            Self::Unary(op, v) => write!(f, "ERROR: cannot perform {} on {}", op.name(), v.typ()),
+            Self::InvalidUnaryOp(op) => write!(f, "ERROR: invalid unary operator {}", op.name()),
         }
     }
 }

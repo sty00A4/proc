@@ -355,6 +355,7 @@ pub fn lex(path: &String, text: &String, context: &mut Context) -> Result<Vec<Ve
                             "or" => T::Or,
                             "and" => T::And,
                             "xor" => T::Xor,
+                            "not" => T::Not,
                             "any" => T::Type(Type::Any),
                             "undefined" => T::Type(Type::Undefiend),
                             "int" => T::Type(Type::Int),
