@@ -34,6 +34,18 @@ impl Context {
             trace: context.trace.clone(), path: context.path.clone()
         }
     }
+    pub fn proc(context: &Context) -> Self {
+        Self {
+            stack: vec![Scope::new()], global: context.global.clone(),
+            trace: context.trace.clone(), path: context.path.clone()
+        }
+    }
+    pub fn push(&mut self) {
+        self.stack.push(Scope::new());
+    }
+    pub fn pop(&mut self) -> Option<Scope> {
+        self.stack.pop()
+    }
     pub fn get(&self, id: &String) -> Option<&V> {
         for scope in self.stack.iter().rev() {
             if let Some(v) = scope.get(id) { return Some(v) }
@@ -41,7 +53,10 @@ impl Context {
         self.global.get(id)
     }
     pub fn set(&mut self, id: &String, v: &V) -> Option<V> {
-        for scope in self.stack.iter_mut() {
+        if let Some(_) = self.global.get(id) {
+            return self.global.set(id, v)
+        }
+        for scope in self.stack.iter_mut().rev() {
             if let Some(_) = scope.get(id) {
                 return scope.set(id, v)
             }

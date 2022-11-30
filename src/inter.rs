@@ -126,6 +126,16 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
         Node(N::Float(v), _) => Ok((V::Float(*v), R::None)),
         Node(N::Bool(v), _) => Ok((V::Bool(*v), R::None)),
         Node(N::String(v), _) => Ok((V::String(v.to_owned()), R::None)),
+        Node(N::ID(id), pos) => {
+            let value = context.get(id);
+            match value {
+                Some(value) => Ok((value.clone(), R::None)),
+                None => {
+                    context.trace(pos.clone());
+                    Err(E::NotDefined(id.clone()))
+                }
+            }
+        }
         Node(N::Vector(nodes), _) => {
             let mut values: Vec<V> = vec![];
             let mut types: Vec<Type> = vec![];
@@ -199,11 +209,33 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
             Ok((value, R::Return))
         }
         Node(N::Body(nodes), _) => {
+            context.push();
             for n in nodes.iter() {
                 let (value, ret) = interpret(n, context)?;
-                if ret != R::None { return Ok((value, ret)) }
+                if ret != R::None {
+                    context.pop();
+                    return Ok((value, ret))
+                }
             }
+            context.pop();
             Ok((V::Null, R::None))
+        }
+        Node(N::Assign { global, id: id_node, expr }, pos) => {
+            let (value, _) = interpret(expr, context)?;
+            match id_node.as_ref() {
+                Node(N::ID(id), id_pos) => {
+                    if *global {
+                        context.set(id, &value);
+                    } else {
+                        context.def(id, &value);
+                    }
+                    Ok((V::Null, R::None))
+                }
+                _ => {
+                    context.trace(pos.clone());
+                    Err(E::CannotAssign(id_node.0.clone()))
+                }
+            }
         }
         _ => Err(E::Todo(input_node.to_string()))
     }

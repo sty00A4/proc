@@ -14,6 +14,8 @@ pub enum E {
     InvalidBinaryOp(T),
     Unary(T, V),
     InvalidUnaryOp(T),
+    CannotAssign(N),
+    NotDefined(String),
 }
 impl std::fmt::Display for E {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -30,6 +32,8 @@ impl std::fmt::Display for E {
             Self::InvalidBinaryOp(op) => write!(f, "ERROR: invalid binary operator {}", op.name()),
             Self::Unary(op, v) => write!(f, "ERROR: cannot perform {} on {}", op.name(), v.typ()),
             Self::InvalidUnaryOp(op) => write!(f, "ERROR: invalid unary operator {}", op.name()),
+            Self::CannotAssign(id) => write!(f, "ERROR: cannot assign value to {}", id.name()),
+            Self::NotDefined(id) => write!(f, "ERROR: {id} is not defined"),
         }
     }
 }
