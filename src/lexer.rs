@@ -363,6 +363,8 @@ pub fn lex(path: &String, text: &String, context: &mut Context) -> Result<Vec<Ve
                             "str" => T::Type(Type::String),
                             "tuple" => T::Type(Type::Tuple(vec![])),
                             "vec" => T::Type(Type::Vector(Box::new(Type::Any))),
+                            "obj" => T::Type(Type::Object),
+                            "type" => T::Type(Type::Type),
                             _ => T::ID(id)
                         })(), Position::new(ln..ln+1, start..col)));
                         continue
@@ -393,7 +395,7 @@ pub fn lex(path: &String, text: &String, context: &mut Context) -> Result<Vec<Ve
                         continue
                     }
                     // error
-                    context.trace(Position::new(ln..ln+1, col..col+1), path);
+                    context.trace(Position::new(ln..ln+1, col..col+1));
                     return Err(E::IllegalChar(line[col..col+1].to_string()))
                 }
             }

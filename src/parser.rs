@@ -83,7 +83,7 @@ impl std::fmt::Display for N {
     }
 }
 #[derive(Debug, Clone)]
-pub struct Node(N, Position);
+pub struct Node(pub N, pub Position);
 impl std::fmt::Display for Node {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "({})", self.0)
@@ -230,7 +230,7 @@ impl Parser {
     }
     pub fn expect(&mut self, token: T, context: &mut Context) -> Result<(), E> {
         if self.token() != &token {
-            context.trace(self.pos().to_owned(), &self.path);
+            context.trace(self.pos().to_owned());
             return Err(E::ExpectedToken(token, self.token().to_owned()))
         }
         Ok(())
@@ -572,7 +572,7 @@ impl Parser {
                 Ok(Node(N::Object(nodes), Position::new(start_ln..self.ln+1, start_col..self.col)))
             }
             _ => {
-                context.trace(self.pos().to_owned(), &self.path);
+                context.trace(self.pos().to_owned());
                 Err(E::UnexpectedToken(self.token().to_owned()))
             }
         }?;

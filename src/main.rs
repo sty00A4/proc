@@ -6,15 +6,17 @@ mod value;
 mod context;
 mod lexer;
 mod parser;
+mod inter;
 use position::*;
 use errors::*;
 use value::*;
 use context::*;
 use lexer::*;
 use parser::*;
+use inter::*;
 
 fn run_context(path: &String, text: &String) -> Result<V, E> {
-    let mut context = Context::new();
+    let mut context = Context::new(path);
     let tokens = lex(path, text, &mut context)?;
     // for (ln, line) in tokens.iter().enumerate() {
     //     print!("{ln} ");

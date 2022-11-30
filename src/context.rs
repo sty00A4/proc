@@ -21,12 +21,18 @@ impl Scope {
 pub struct Context {
     pub stack: Vec<Scope>,
     pub global: Scope,
-    pub trace: Vec<(Position, String)>
+    pub trace: Vec<(Position, String)>,
+    pub path: String,
 }
 impl Context {
-    pub fn new() -> Self { Self { stack: vec![Scope::new()], global: Scope::new(), trace: vec![] } }
+    pub fn new(path: &String) -> Self {
+        Self { stack: vec![Scope::new()], global: Scope::new(), trace: vec![], path: path.clone() }
+    }
     pub fn from(context: &Context) -> Self {
-        Self { stack: context.stack.clone(), global: context.global.clone(), trace: context.trace.clone() }
+        Self {
+            stack: context.stack.clone(), global: context.global.clone(),
+            trace: context.trace.clone(), path: context.path.clone()
+        }
     }
     pub fn get(&self, id: &String) -> Option<&V> {
         for scope in self.stack.iter().rev() {
@@ -45,7 +51,7 @@ impl Context {
     pub fn def(&mut self, id: &String, v: &V) -> Option<V> {
         self.global.set(id, v)
     }
-    pub fn trace(&mut self, pos: Position, path: &String) {
-        self.trace.push((pos, path.clone()));
+    pub fn trace(&mut self, pos: Position) {
+        self.trace.push((pos, self.path.clone()));
     }
 }
