@@ -202,13 +202,13 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
             let (proc, _) = interpret(id_node, context)?;
             match proc {
                 V::Proc(ref params, ref body) => {
-                    let mut old_context = Context::from(context);
-                    *context = Context::proc(context);
                     let mut arg_values: Vec<V> = vec![];
                     for arg in args.iter() {
                         let (value, _) = interpret(arg, context)?;
                         arg_values.push(value);
                     }
+                    let mut old_context = Context::from(context);
+                    *context = Context::proc(context);
                     for i in 0..params.len() {
                         let (param, typ_) = &params[i];
                         let value = match arg_values.get(i) {
@@ -228,13 +228,13 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                     Ok((value, R::None))
                 }
                 V::ForeignProc(ref params, ref func) => {
-                    let mut old_context = Context::from(context);
-                    *context = Context::proc(context);
                     let mut arg_values: Vec<V> = vec![];
                     for arg in args.iter() {
                         let (value, _) = interpret(arg, context)?;
                         arg_values.push(value);
                     }
+                    let mut old_context = Context::from(context);
+                    *context = Context::proc(context);
                     for i in 0..params.len() {
                         let (param, typ_) = &params[i];
                         let value = match arg_values.get(i) {
@@ -253,7 +253,21 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                     *context = old_context;
                     Ok((value, R::None))
                 }
-                // V::Type(typ) => {}
+                V::Type(typ) => {
+                    let mut arg_values: Vec<V> = vec![];
+                    for arg in args.iter() {
+                        let (value, _) = interpret(arg, context)?;
+                        arg_values.push(value);
+                    }
+                    let arg = arg_values.get(0).or_else(|| Some(&V::Null)).unwrap();
+                    match typ.cast(arg) {
+                        Some(value) => Ok((value, R::None)),
+                        None => {
+                            context.trace(pos.clone());
+                            return Err(E::Cast(typ.clone(), arg.clone()))
+                        }
+                    }
+                }
                 _ => {
                     context.trace(pos.clone());
                     Err(E::ExpectedType(Type::Union(vec![Type::Proc, Type::ForeignProc, Type::Type]), proc.typ()))
@@ -413,13 +427,13 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
             let (proc, _) = interpret(id_node, context)?;
             match proc {
                 V::Proc(ref params, ref body) => {
-                    let mut old_context = Context::from(context);
-                    *context = Context::proc(context);
                     let mut arg_values: Vec<V> = vec![];
                     for arg in args.iter() {
                         let (value, _) = interpret(arg, context)?;
                         arg_values.push(value);
                     }
+                    let mut old_context = Context::from(context);
+                    *context = Context::proc(context);
                     for i in 0..params.len() {
                         let (param, typ_) = &params[i];
                         let value = match arg_values.get(i) {
@@ -439,13 +453,13 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                     Ok((V::Null, R::None))
                 }
                 V::ForeignProc(ref params, ref func) => {
-                    let mut old_context = Context::from(context);
-                    *context = Context::proc(context);
                     let mut arg_values: Vec<V> = vec![];
                     for arg in args.iter() {
                         let (value, _) = interpret(arg, context)?;
                         arg_values.push(value);
                     }
+                    let mut old_context = Context::from(context);
+                    *context = Context::proc(context);
                     for i in 0..params.len() {
                         let (param, typ_) = &params[i];
                         let value = match arg_values.get(i) {

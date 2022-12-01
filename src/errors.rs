@@ -17,6 +17,7 @@ pub enum E {
     InvalidUnaryOp(T),
     CannotAssign(N),
     NotDefined(String),
+    Cast(Type, V),
 }
 impl std::fmt::Display for E {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -36,6 +37,7 @@ impl std::fmt::Display for E {
             Self::InvalidUnaryOp(op) => write!(f, "ERROR: invalid unary operator {}", op.name()),
             Self::CannotAssign(id) => write!(f, "ERROR: cannot assign value to {}", id.name()),
             Self::NotDefined(id) => write!(f, "ERROR: {id} is not defined"),
+            Self::Cast(typ, v) => write!(f, "ERROR: cannot cast {v:?} to {typ}"),
         }
     }
 }

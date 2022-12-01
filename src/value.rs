@@ -139,6 +139,56 @@ impl Type {
         for t in types { if !collected.contains(&t) { collected.push(t); } }
         Self::Union(collected)
     }
+    pub fn cast(&self, value: &V) -> Option<V> {
+        match self {
+            Type::Any => Some(value.clone()),
+            Type::Undefiend => Some(V::Null),
+            Type::Int => match value {
+                V::Int(_) => Some(value.clone()),
+                V::Float(v) => Some(V::Int(*v as i64)),
+                V::Bool(v) => Some(V::Int(*v as i64)),
+                V::Wildcard | V::Null => Some(V::Int(0)),
+                V::String(v) => match v.parse::<i64>() {
+                    Ok(v) => Some(V::Int(v)),
+                    Err(_) => None,
+                }
+                _ => None
+            }
+            Type::Float => match value {
+                V::Float(_) => Some(value.clone()),
+                V::Int(v) => Some(V::Float(*v as f64)),
+                V::Bool(v) => Some(V::Float(*v as u8 as f64)),
+                V::Wildcard | V::Null => Some(V::Float(0.0)),
+                V::String(v) => match v.parse::<f64>() {
+                    Ok(v) => Some(V::Float(v)),
+                    Err(_) => None,
+                }
+                _ => None
+            }
+            Type::Bool => match value {
+                V::Bool(_) => Some(value.clone()),
+                V::Int(v) => Some(V::Bool(*v == 0)),
+                V::Float(v) => Some(V::Bool(*v == 0.0)),
+                V::Null => Some(V::Bool(false)),
+                V::String(v) => match v.parse::<bool>() {
+                    Ok(v) => Some(V::Bool(v)),
+                    Err(_) => None,
+                }
+                _ => Some(V::Bool(true))
+            }
+            Type::String => Some(V::String(value.to_string())),
+            Type::Tuple(typ) => match value {
+                V::Tuple(_) => Some(value.clone()),
+                _ => None
+            }
+            Type::Vector(typ) => match value {
+                V::Vector(_, _) => Some(value.clone()),
+                _ => None
+            }
+            Type::Type => Some(V::Type(value.typ())),
+            _ => None
+        }
+    }
 }
 impl std::fmt::Display for Type {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
