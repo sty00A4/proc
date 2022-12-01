@@ -17,6 +17,7 @@ use inter::*;
 
 fn run_context(path: &String, text: &String) -> Result<Option<V>, E> {
     let mut context = Context::new(path);
+    std_context(&mut context);
     let tokens = lex(path, text, &mut context)?;
     // for (ln, line) in tokens.iter().enumerate() {
     //     print!("{ln} ");

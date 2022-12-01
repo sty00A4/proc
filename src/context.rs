@@ -69,3 +69,14 @@ impl Context {
         self.trace.push((pos, self.path.clone()));
     }
 }
+
+pub fn _print(context: &mut Context) -> Result<V, E> {
+    let x = context.get(&String::from("x"));
+    if let Some(x) = x { println!("{x}"); }
+    Ok(V::Null)
+}
+pub fn std_context(context: &mut Context) {
+    context.set(&String::from("print"), &V::ForeignProc(vec![
+        ("x".into(), None)
+    ], _print));
+}

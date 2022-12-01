@@ -256,7 +256,7 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                 // V::Type(typ) => {}
                 _ => {
                     context.trace(pos.clone());
-                    Err(E::ExpectedType(Type::Proc, proc.typ()))
+                    Err(E::ExpectedType(Type::Union(vec![Type::Proc, Type::ForeignProc, Type::Type]), proc.typ()))
                 }
             }
         }
@@ -408,6 +408,68 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
             }
             context.trace(name_node.1.clone());
             Err(E::ExpectedNode(N::ID("_".into()), name_node.0.clone()))
+        }
+        Node(N::Call { id: id_node, args }, pos) => {
+            let (proc, _) = interpret(id_node, context)?;
+            match proc {
+                V::Proc(ref params, ref body) => {
+                    let mut old_context = Context::from(context);
+                    *context = Context::new(&context.path);
+                    let mut arg_values: Vec<V> = vec![];
+                    for arg in args.iter() {
+                        let (value, _) = interpret(arg, context)?;
+                        arg_values.push(value);
+                    }
+                    for i in 0..params.len() {
+                        let (param, typ_) = &params[i];
+                        let value = match arg_values.get(i) {
+                            Some(v) => v.clone(),
+                            None => V::Null
+                        };
+                        if let Some(typ) = typ_ {
+                            if typ != &value.typ() {
+                                context.trace(pos.clone());
+                                return Err(E::ExpectedTypeArg(format!("{i}"), typ.clone(), value.typ()))
+                            }
+                        }
+                        context.set(param, &value);
+                    }
+                    interpret(body, context)?;
+                    *context = old_context;
+                    Ok((V::Null, R::None))
+                }
+                V::ForeignProc(ref params, ref func) => {
+                    let mut old_context = Context::from(context);
+                    *context = Context::new(&context.path);
+                    let mut arg_values: Vec<V> = vec![];
+                    for arg in args.iter() {
+                        let (value, _) = interpret(arg, context)?;
+                        arg_values.push(value);
+                    }
+                    for i in 0..params.len() {
+                        let (param, typ_) = &params[i];
+                        let value = match arg_values.get(i) {
+                            Some(v) => v.clone(),
+                            None => V::Null
+                        };
+                        if let Some(typ) = typ_ {
+                            if typ != &value.typ() {
+                                context.trace(pos.clone());
+                                return Err(E::ExpectedTypeArg(format!("{i}"), typ.clone(), value.typ()))
+                            }
+                        }
+                        context.set(param, &value);
+                    }
+                    func(context)?;
+                    *context = old_context;
+                    Ok((V::Null, R::None))
+                }
+                // V::Type(typ) => {}
+                _ => {
+                    context.trace(pos.clone());
+                    Err(E::ExpectedType(Type::Union(vec![Type::Proc, Type::ForeignProc]), proc.typ()))
+                }
+            }
         }
         _ => Err(E::Todo(input_node.to_string()))
     }
