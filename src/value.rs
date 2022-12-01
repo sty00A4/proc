@@ -7,6 +7,7 @@ pub enum V {
     Int(i64), Float(f64), Bool(bool), String(String),
     Tuple(Vec<V>),
     Vector(Vec<V>, Type), Object(HashMap<String, V>),
+    Proc(Vec<(String, Option<Type>)>, Node),
     Type(Type)
 }
 impl std::fmt::Display for V {
@@ -21,6 +22,7 @@ impl std::fmt::Display for V {
             Self::Tuple(v) => write!(f, "({})", v.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(", ")),
             Self::Vector(v, _) => write!(f, "{v:?}"),
             Self::Object(v) => write!(f, "{{ {} }}", v.iter().map(|(k, v)| format!("{k} = {v}")).collect::<Vec<String>>().join(", ")),
+            Self::Proc(_, body) => write!(f, "proc:{:?}", body as *const Node),
             Self::Type(v) => write!(f, "{v}"),
         }
     }
@@ -36,7 +38,8 @@ impl std::fmt::Debug for V {
             Self::String(v) => write!(f, "{v:?}"),
             Self::Tuple(v) => write!(f, "({})", v.iter().map(|x| format!("{x:?}")).collect::<Vec<String>>().join(", ")),
             Self::Vector(v, _) => write!(f, "{v:?}"),
-            Self::Object(v) => write!(f, "obj:{:?}", v as *const HashMap<String, V>),
+            Self::Object(v) => write!(f, "{{ {} }}", v.iter().map(|(k, v)| format!("{k} = {v:?}")).collect::<Vec<String>>().join(", ")),
+            Self::Proc(_, body) => write!(f, "proc:{:?}", body as *const Node),
             Self::Type(v) => write!(f, "{v:?}"),
         }
     }
@@ -84,6 +87,10 @@ impl PartialEq for V {
                 Self::Object(v2) => v1 == v2,
                 _ => false
             }
+            Self::Proc(params1, body1) => match other {
+                Self::Proc(params2, body2) => (body1 as *const Node) == (body2 as *const Node),
+                _ => false
+            }
             Self::Type(v1) => match other {
                 Self::Type(v2) => v1 == v2,
                 _ => false
@@ -103,6 +110,7 @@ impl V {
             Self::Tuple(v) => Type::Tuple(v.iter().map(|x| x.typ()).collect()),
             Self::Vector(_, t) => t.clone(),
             Self::Object(_) => Type::Object,
+            Self::Proc(_, _) => Type::Proc,
             Self::Type(_) => Type::Type,
         }
     }
@@ -113,6 +121,7 @@ pub enum Type {
     Any, Undefiend,
     Int, Float, Bool, String,
     Tuple(Vec<Type>), Vector(Box<Type>), Object,
+    Proc,
     Type,
     Union(Vec<Type>), Scission(Vec<Type>)
 }
@@ -140,6 +149,7 @@ impl std::fmt::Debug for Type {
             Self::Tuple(types) => write!(f, "({})", types.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(", ")),
             Self::Vector(t) => write!(f, "vec"),
             Self::Object => write!(f, "obj"),
+            Self::Proc => write!(f, "proc"),
             Self::Type => write!(f, "type"),
             Self::Union(types) => write!(f, "union[{}]", types.iter().map(|x| x.to_string()).collect::<Vec<String>>().join("|")),
             Self::Scission(types) => write!(f, "scission[{}]", types.iter().map(|x| x.to_string()).collect::<Vec<String>>().join("|")),
@@ -201,6 +211,13 @@ impl PartialEq for Type {
             }
             Self::Object => match other {
                 Self::Object => true,
+                Self::Any => true,
+                Self::Union(_) => other == self,
+                Self::Scission(_) => other == self,
+                _ => false
+            }
+            Self::Proc => match other {
+                Self::Proc => true,
                 Self::Any => true,
                 Self::Union(_) => other == self,
                 Self::Scission(_) => other == self,

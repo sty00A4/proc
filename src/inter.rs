@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::cmp::min;
 use crate::*;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -197,6 +198,42 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                 }
             }
         }
+        Node(N::CallExpr { id: id_node, args }, pos) => {
+            let (proc, _) = interpret(id_node, context)?;
+            match proc {
+                V::Proc(ref params, ref body) => {
+                    let mut old_context = Context::from(context);
+                    *context = Context::new(&context.path);
+                    let mut arg_values: Vec<V> = vec![];
+                    for arg in args.iter() {
+                        let (value, _) = interpret(arg, context)?;
+                        arg_values.push(value);
+                    }
+                    for i in 0..params.len() {
+                        let (param, typ_) = &params[i];
+                        let value = match arg_values.get(i) {
+                            Some(v) => v.clone(),
+                            None => V::Null
+                        };
+                        if let Some(typ) = typ_ {
+                            if typ != &value.typ() {
+                                context.trace(pos.clone());
+                                return Err(E::ExpectedTypeArg(format!("{i}"), typ.clone(), value.typ()))
+                            }
+                        }
+                        context.set(param, &value);
+                    }
+                    let res = interpret(body, context)?;
+                    *context = old_context;
+                    Ok(res)
+                }
+                // V::Type(typ) => {}
+                _ => {
+                    context.trace(pos.clone());
+                    Err(E::ExpectedType(Type::Proc, proc.typ()))
+                }
+            }
+        }
 
         // structure
         Node(N::Return(node), _) => {
@@ -318,6 +355,33 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                     Err(E::CannotAssign(id_node.0.clone()))
                 }
             }
+        }
+        Node(N::Proc { name: name_node, params: param_nodes, body: body_node }, pos) => {
+            if let Node(N::ID(id), name_pos) = name_node.as_ref() {
+                let mut params: Vec<(String, Option<Type>)> = vec![];
+                for (param_node, type_node_) in param_nodes {
+                    if let Node(N::ID(id), param_pos) = param_node {
+                        let mut typ: Option<Type> = None;
+                        if let Some(type_node) = type_node_ {
+                            let (type_value, _) = interpret(type_node, context)?;
+                            if let V::Type(type_value_typ) = type_value {
+                                typ = Some(type_value_typ);
+                            } else {
+                                context.trace(type_node.1.clone());
+                                return Err(E::ExpectedType(Type::Type, type_value.typ()))
+                            }
+                        }
+                        params.push((id.clone(), typ))
+                    } else {
+                        context.trace(param_node.1.clone());
+                        return Err(E::ExpectedNode(N::ID("_".into()), param_node.0.clone()))
+                    }
+                }
+                context.set(id, &V::Proc(params.clone(), body_node.as_ref().clone()));
+                return Ok((V::Null, R::None))
+            }
+            context.trace(name_node.1.clone());
+            Err(E::ExpectedNode(N::ID("_".into()), name_node.0.clone()))
         }
         _ => Err(E::Todo(input_node.to_string()))
     }

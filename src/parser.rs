@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use crate::*;
 
+pub type ProcParams = Vec<(Node, Option<Node>)>;
+
 #[derive(Debug, Clone)]
 pub enum N {
     Body(Vec<Node>),
@@ -14,7 +16,7 @@ pub enum N {
     Call { id: Box<Node>, args: Vec<Node> }, CallExpr { id: Box<Node>, args: Vec<Node> },
     If { cond: Box<Node>, body: Box<Node>, else_body: Option<Box<Node>> }, While { cond: Box<Node>, body: Box<Node> },
     IfExpr { cond: Box<Node>, node: Box<Node>, else_node: Box<Node> },
-    Proc { name: Box<Node>, params: Vec<(Node, Option<Node>, Option<Node>)>, body: Box<Node> },
+    Proc { name: Box<Node>, params: ProcParams, body: Box<Node> },
     Rule { name: Box<Node>, id: Box<Node>, rules: Vec<Node> },
 }
 impl N {
@@ -95,16 +97,10 @@ impl std::fmt::Display for N {
             Self::IfExpr { cond, node, else_node } => write!(f, "{node} if {cond} else {else_node}"),
             Self::While { cond, body } => write!(f, "while {cond} {body}"),
             Self::Proc { name, params, body } => write!(f, "proc {name} <- {} {body}",
-            params.iter().map(|(id, typ, default)|
+            params.iter().map(|(id, typ)|
                 match typ {
-                    Some(typv) => match default {
-                        Some(defaultv) => format!("{id} : {typv} = {defaultv}"),
-                        None => format!("{id} : {typv}")
-                    }
-                    None => match default {
-                        Some(defaultv) => format!("{id} = {defaultv}"),
-                        None => format!("{id}")
-                    }
+                    Some(typv) => format!("{id} : {typv}"),
+                    None => format!("{id}")
                 }
             ).collect::<Vec<String>>().join(", ")),
             Self::Rule { name, id, rules } => write!(f, "rule {name} <- {id}; {}", rules.iter().map(|x| x.to_string())
@@ -165,16 +161,10 @@ impl Node {
             cond.display(indent), else_node.display(indent)),
             N::While { cond, body } => format!("{s}while {} \n{}", cond.display(indent), body.display(indent + 1)),
             N::Proc { name, params, body } => format!("{s}proc {} <- {} \n{}", name.display(indent),
-            params.iter().map(|(id, typ, default)|
+            params.iter().map(|(id, typ)|
                 match typ {
-                    Some(typv) => match default {
-                        Some(defaultv) => format!("{} : {} = {}", id.display(indent), typv.display(indent), defaultv.display(indent)),
-                        None => format!("{} : {}", id.display(indent), typv.display(indent))
-                    }
-                    None => match default {
-                        Some(defaultv) => format!("{} = {}", id.display(indent), defaultv.display(indent)),
-                        None => format!("{}", id.display(indent))
-                    }
+                    Some(typv) => format!("{} : {}", id.display(indent), typv.display(indent)),
+                    None => format!("{}", id.display(indent))
                 }
             ).collect::<Vec<String>>().join(" "), body.display(indent + 1)),
             N::Rule { name, id, rules } => format!("{s}rule {} <- {}\n{}",
@@ -427,22 +417,18 @@ impl Parser {
                 let (start_ln, start_col) = (self.ln, self.col);
                 self.advance();
                 let name = self.atom(context)?;
-                let mut params: Vec<(Node, Option<Node>, Option<Node>)> = vec![];
+                let mut params: Vec<(Node, Option<Node>)> = vec![];
                 if self.token() == &T::In {
                     self.advance();
                     while self.token() != &T::EOL {
                         let mut typ: Option<Node> = None;
-                        let mut default: Option<Node> = None;
                         let id = self.atom(context)?;
                         if self.token() == &T::Rep {
                             self.advance();
                             typ = Some(self.operation(self.ops(0), 0, context)?);
                         }
-                        if self.token() == &T::Assign {
-                            self.advance();
-                            default = Some(self.expr(context)?);
-                        }
-                        params.push((id, typ, default));
+                        self.advance_if(T::Sep, context);
+                        params.push((id, typ));
                     }
                 }
                 self.expect(T::EOL, context)?;
