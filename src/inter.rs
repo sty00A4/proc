@@ -223,9 +223,35 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                         }
                         context.set(param, &value);
                     }
-                    let res = interpret(body, context)?;
+                    let (value, _) = interpret(body, context)?;
                     *context = old_context;
-                    Ok(res)
+                    Ok((value, R::None))
+                }
+                V::ForeignProc(ref params, ref func) => {
+                    let mut old_context = Context::from(context);
+                    *context = Context::new(&context.path);
+                    let mut arg_values: Vec<V> = vec![];
+                    for arg in args.iter() {
+                        let (value, _) = interpret(arg, context)?;
+                        arg_values.push(value);
+                    }
+                    for i in 0..params.len() {
+                        let (param, typ_) = &params[i];
+                        let value = match arg_values.get(i) {
+                            Some(v) => v.clone(),
+                            None => V::Null
+                        };
+                        if let Some(typ) = typ_ {
+                            if typ != &value.typ() {
+                                context.trace(pos.clone());
+                                return Err(E::ExpectedTypeArg(format!("{i}"), typ.clone(), value.typ()))
+                            }
+                        }
+                        context.set(param, &value);
+                    }
+                    let value = func(context)?;
+                    *context = old_context;
+                    Ok((value, R::None))
                 }
                 // V::Type(typ) => {}
                 _ => {
