@@ -76,7 +76,7 @@ pub fn _print(context: &mut Context) -> Result<V, E> {
     Ok(V::Null)
 }
 pub fn std_context(context: &mut Context) {
-    context.set(&String::from("print"), &V::ForeignProc(vec![
+    context.def(&String::from("print"), &V::ForeignProc(vec![
         ("x".into(), None)
     ], _print));
 }

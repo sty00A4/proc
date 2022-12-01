@@ -203,7 +203,7 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
             match proc {
                 V::Proc(ref params, ref body) => {
                     let mut old_context = Context::from(context);
-                    *context = Context::new(&context.path);
+                    *context = Context::proc(context);
                     let mut arg_values: Vec<V> = vec![];
                     for arg in args.iter() {
                         let (value, _) = interpret(arg, context)?;
@@ -229,7 +229,7 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                 }
                 V::ForeignProc(ref params, ref func) => {
                     let mut old_context = Context::from(context);
-                    *context = Context::new(&context.path);
+                    *context = Context::proc(context);
                     let mut arg_values: Vec<V> = vec![];
                     for arg in args.iter() {
                         let (value, _) = interpret(arg, context)?;
@@ -414,7 +414,7 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
             match proc {
                 V::Proc(ref params, ref body) => {
                     let mut old_context = Context::from(context);
-                    *context = Context::new(&context.path);
+                    *context = Context::proc(context);
                     let mut arg_values: Vec<V> = vec![];
                     for arg in args.iter() {
                         let (value, _) = interpret(arg, context)?;
@@ -440,7 +440,7 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                 }
                 V::ForeignProc(ref params, ref func) => {
                     let mut old_context = Context::from(context);
-                    *context = Context::new(&context.path);
+                    *context = Context::proc(context);
                     let mut arg_values: Vec<V> = vec![];
                     for arg in args.iter() {
                         let (value, _) = interpret(arg, context)?;
