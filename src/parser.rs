@@ -1,9 +1,5 @@
 use std::collections::HashMap;
-use crate::position::*;
-use crate::errors::*;
-use crate::context::*;
-use crate::value::*;
-use crate::lexer::*;
+use crate::*;
 
 #[derive(Debug, Clone)]
 pub enum N {

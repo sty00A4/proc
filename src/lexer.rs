@@ -1,8 +1,5 @@
 use std::cmp::min;
-use crate::position::*;
-use crate::errors::*;
-use crate::context::*;
-use crate::value::*;
+use crate::*;
 
 static DIGITS: [&str; 10] = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
 static LETTERS: [&str; 53] = [

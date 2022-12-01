@@ -1,10 +1,5 @@
 use std::collections::HashMap;
-use crate::position::*;
-use crate::errors::*;
-use crate::context::*;
-use crate::value::*;
-use crate::lexer::*;
-use crate::parser::*;
+use crate::*;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum R { None, Return, Break, Continue }

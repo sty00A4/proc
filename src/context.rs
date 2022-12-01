@@ -1,6 +1,5 @@
 use std::collections::HashMap;
-use crate::position::*;
-use crate::value::*;
+use crate::*;
 
 #[derive(Debug, Clone)]
 pub struct Scope {

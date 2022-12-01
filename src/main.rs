@@ -58,14 +58,7 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use std::collections::HashSet;
-
     use crate::*;
-    use crate::position::*;
-    use crate::errors::*;
-    use crate::value::*;
-    use crate::context::*;
-    use crate::lexer::*;
-    use crate::parser::*;
 
     #[test]
     fn type_checking() {
