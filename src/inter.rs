@@ -80,6 +80,73 @@ pub fn binary(op: &T, left: &V, right: &V, pos: &Position, context: &mut Context
             }
             _ => {}
         }
+        T::EQ => return Ok(V::Bool(left == right)),
+        T::NE => return Ok(V::Bool(left != right)),
+        T::LT => match left {
+            V::Int(v1) => match right {
+                V::Int(v2) => return Ok(V::Bool(*v1 < *v2)),
+                V::Float(v2) => return Ok(V::Bool((*v1 as f64) < *v2)),
+                _ => {}
+            }
+            V::Float(v1) => match right {
+                V::Int(v2) => return Ok(V::Bool(*v1 < *v2 as f64)),
+                V::Float(v2) => return Ok(V::Bool(*v1 < *v2)),
+                _ => {}
+            }
+            _ => {}
+        }
+        T::GT => match left {
+            V::Int(v1) => match right {
+                V::Int(v2) => return Ok(V::Bool(*v1 > *v2)),
+                V::Float(v2) => return Ok(V::Bool(*v1 as f64 > *v2)),
+                _ => {}
+            }
+            V::Float(v1) => match right {
+                V::Int(v2) => return Ok(V::Bool(*v1 > *v2 as f64)),
+                V::Float(v2) => return Ok(V::Bool(*v1 > *v2)),
+                _ => {}
+            }
+            _ => {}
+        }
+        T::LE => match left {
+            V::Int(v1) => match right {
+                V::Int(v2) => return Ok(V::Bool(*v1 <= *v2)),
+                V::Float(v2) => return Ok(V::Bool(*v1 as f64 <= *v2)),
+                _ => {}
+            }
+            V::Float(v1) => match right {
+                V::Int(v2) => return Ok(V::Bool(*v1 <= *v2 as f64)),
+                V::Float(v2) => return Ok(V::Bool(*v1 <= *v2)),
+                _ => {}
+            }
+            _ => {}
+        }
+        T::GE => match left {
+            V::Int(v1) => match right {
+                V::Int(v2) => return Ok(V::Bool(*v1 >= *v2)),
+                V::Float(v2) => return Ok(V::Bool(*v1 as f64 >= *v2)),
+                _ => {}
+            }
+            V::Float(v1) => match right {
+                V::Int(v2) => return Ok(V::Bool(*v1 >= *v2 as f64)),
+                V::Float(v2) => return Ok(V::Bool(*v1 >= *v2)),
+                _ => {}
+            }
+            _ => {}
+        }
+        T::Is => match right {
+            V::Type(typ) => return Ok(V::Bool(&left.typ() == typ)),
+            _ => {}
+        }
+        T::Contains => match right {
+            V::Vector(v, t) => return Ok(V::Bool(v.contains(left))),
+            V::Tuple(v) => return Ok(V::Bool(v.contains(left))),
+            V::Object(v) => match left {
+                V::String(k) => return Ok(V::Bool(v.clone().into_keys().collect::<Vec<String>>().contains(k))),
+                _ => {}
+            }
+            _ => {}
+        }
         _ => {
             context.trace(pos.to_owned());
             return Err(E::InvalidBinaryOp(op.to_owned()))
@@ -484,6 +551,25 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                     Err(E::ExpectedType(Type::Union(vec![Type::Proc, Type::ForeignProc]), proc.typ()))
                 }
             }
+        }
+        Node(N::If { cond: cond_node, body, else_body }, _) => {
+            let (cond, _) = interpret(cond_node, context)?;
+            if Type::Bool.cast(&cond).or_else(|| Some(V::Bool(false))).unwrap() == V::Bool(true) {
+                return interpret(body, context)
+            } else if let Some(else_body) = else_body {
+                return interpret(else_body, context)
+            }
+            Ok((V::Null, R::None))
+        }
+        Node(N::While { cond: cond_node, body }, _) => {
+            let (mut cond, _) = interpret(cond_node, context)?;
+            while Type::Bool.cast(&cond).or_else(|| Some(V::Bool(false))).unwrap() == V::Bool(true) {
+                let (value, ret) = interpret(body, context)?;
+                if ret == R::Return { return Ok((value, ret)) }
+                if ret == R::Break { break }
+                (cond, _) = interpret(cond_node, context)?;
+            }
+            Ok((V::Null, R::None))
         }
         _ => Err(E::Todo(input_node.to_string()))
     }
