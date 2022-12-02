@@ -70,13 +70,29 @@ impl Context {
     }
 }
 
-pub fn _print(context: &mut Context) -> Result<V, E> {
+pub fn _print(context: &mut Context, pos: &Position) -> Result<V, E> {
     let x = context.get(&String::from("x"));
     if let Some(x) = x { println!("{x}"); }
+    Ok(V::Null)
+}
+pub fn _assert(context: &mut Context, pos: &Position) -> Result<V, E> {
+    let x = context.get(&String::from("x"));
+    if let Some(x) = x {
+        if Type::Bool.cast(x).unwrap_or_else(|| V::Bool(false)) == V::Bool(false) {
+            context.trace(pos.clone());
+            return Err(E::Assertion)
+        }
+    } else {
+        context.trace(pos.clone());
+        return Err(E::Assertion)
+    }
     Ok(V::Null)
 }
 pub fn std_context(context: &mut Context) {
     context.def(&String::from("print"), &V::ForeignProc(vec![
         ("x".into(), None)
     ], _print));
+    context.def(&String::from("assert"), &V::ForeignProc(vec![
+        ("x".into(), None)
+    ], _assert));
 }

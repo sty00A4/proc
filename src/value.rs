@@ -1,6 +1,8 @@
 use std::{collections::{HashSet, HashMap}, hash::Hash};
 use crate::*;
 
+type ProcFn = fn(&mut Context, &Position) -> Result<V, E>;
+
 #[derive(Clone)]
 pub enum V {
     Wildcard, Null,
@@ -8,7 +10,7 @@ pub enum V {
     Tuple(Vec<V>),
     Vector(Vec<V>, Type), Object(HashMap<String, V>),
     Proc(Vec<(String, Option<Node>)>, Node),
-    ForeignProc(Vec<(String, Option<Type>)>, fn(&mut Context) -> Result<V, E>),
+    ForeignProc(Vec<(String, Option<Type>)>, ProcFn),
     Rule(String, String, Vec<Node>),
     Type(Type)
 }
@@ -25,7 +27,7 @@ impl std::fmt::Display for V {
             Self::Vector(v, _) => write!(f, "{v:?}"),
             Self::Object(v) => write!(f, "{{ {} }}", v.iter().map(|(k, v)| format!("{k} = {v}")).collect::<Vec<String>>().join(", ")),
             Self::Proc(_, body) => write!(f, "proc:{:?}", body as *const Node),
-            Self::ForeignProc(_, func) => write!(f, "foreign-proc:{:?}", func as *const fn(&mut Context) -> Result<V, E>),
+            Self::ForeignProc(_, func) => write!(f, "foreign-proc:{:?}", func as *const ProcFn),
             Self::Rule(name, _, rules) => write!(f, "{name}-rule:{:?}", rules as *const Vec<Node>),
             Self::Type(v) => write!(f, "{v}"),
         }
@@ -44,7 +46,7 @@ impl std::fmt::Debug for V {
             Self::Vector(v, _) => write!(f, "{v:?}"),
             Self::Object(v) => write!(f, "{{ {} }}", v.iter().map(|(k, v)| format!("{k} = {v:?}")).collect::<Vec<String>>().join(", ")),
             Self::Proc(_, body) => write!(f, "proc:{:?}", body as *const Node),
-            Self::ForeignProc(_, func) => write!(f, "foreign-proc:{:?}", func as *const fn(&mut Context) -> Result<V, E>),
+            Self::ForeignProc(_, func) => write!(f, "foreign-proc:{:?}", func as *const ProcFn),
             Self::Rule(name, _, rules) => write!(f, "{name}-rule:{:?}", rules as *const Vec<Node>),
             Self::Type(v) => write!(f, "{v:?}"),
         }
@@ -102,7 +104,7 @@ impl PartialEq for V {
                 _ => false
             }
             Self::ForeignProc(params1, func1) => match other {
-                Self::ForeignProc(params2, func2) => (func1 as *const fn(&mut Context) -> Result<V, E>) == (func2 as *const fn(&mut Context) -> Result<V, E>),
+                Self::ForeignProc(params2, func2) => (func1 as *const ProcFn) == (func2 as *const ProcFn),
                 Self::Wildcard => true,
                 _ => false
             }

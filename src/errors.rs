@@ -13,6 +13,7 @@ pub enum E {
     CannotAssign(N), NotDefined(String),
     Cast(Type, V),
     Rule(V, String),
+    Assertion
 }
 impl std::fmt::Display for E {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -34,6 +35,7 @@ impl std::fmt::Display for E {
             Self::NotDefined(id) => write!(f, "ERROR: {id} is not defined"),
             Self::Cast(typ, v) => write!(f, "ERROR: cannot cast {v:?} to {typ}"),
             Self::Rule(v, name) => write!(f, "ERROR: rule {name} does not apply on {v:?}"),
+            Self::Assertion => write!(f, "ERROR: assertion failed"),
         }
     }
 }

@@ -187,7 +187,7 @@ pub fn apply_rule(rule_value: &V, value: &V, pos: &Position, context: &mut Conte
         rule_context.set(id, value);
         for rule in rules.iter() {
             let (case, _) = interpret(rule, &mut rule_context)?;
-            if Type::Bool.cast(&case).or_else(|| Some(V::Bool(false))).unwrap() == V::Bool(false) {
+            if Type::Bool.cast(&case).unwrap_or_else(|| V::Bool(false)) == V::Bool(false) {
                 context.trace(rule.1.clone());
                 return Err(E::Rule(value.clone(), name.clone()))
             }
@@ -342,7 +342,7 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                         }
                         context.set(param, &value);
                     }
-                    let value = func(context)?;
+                    let value = func(context, pos)?;
                     *context = old_context;
                     Ok((value, R::None))
                 }
@@ -589,7 +589,7 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                         }
                         context.set(param, &value);
                     }
-                    func(context)?;
+                    func(context, pos)?;
                     *context = old_context;
                     Ok((V::Null, R::None))
                 }
@@ -602,7 +602,7 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
         }
         Node(N::If { cond: cond_node, body, else_body }, _) => {
             let (cond, _) = interpret(cond_node, context)?;
-            if Type::Bool.cast(&cond).or_else(|| Some(V::Bool(false))).unwrap() == V::Bool(true) {
+            if Type::Bool.cast(&cond).unwrap_or_else(|| V::Bool(false)) == V::Bool(true) {
                 return interpret(body, context)
             } else if let Some(else_body) = else_body {
                 return interpret(else_body, context)
@@ -611,7 +611,7 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
         }
         Node(N::While { cond: cond_node, body }, _) => {
             let (mut cond, _) = interpret(cond_node, context)?;
-            while Type::Bool.cast(&cond).or_else(|| Some(V::Bool(false))).unwrap() == V::Bool(true) {
+            while Type::Bool.cast(&cond).unwrap_or_else(|| V::Bool(false)) == V::Bool(true) {
                 let (value, ret) = interpret(body, context)?;
                 if ret == R::Return { return Ok((value, ret)) }
                 if ret == R::Break { break }
