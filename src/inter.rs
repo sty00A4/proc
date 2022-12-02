@@ -136,6 +136,7 @@ pub fn binary(op: &T, left: &V, right: &V, pos: &Position, context: &mut Context
         }
         T::Is => match right {
             V::Type(typ) => return Ok(V::Bool(&left.typ() == typ)),
+            V::Rule(_, _, _) => return Ok(V::Bool(apply_rule(right, left, pos, context).is_ok())),
             _ => {}
         }
         T::Contains => match right {
