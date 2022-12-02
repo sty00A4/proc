@@ -15,28 +15,35 @@ use lexer::*;
 use parser::*;
 use inter::*;
 
-fn run_context(path: &String, text: &String) -> Result<Option<V>, E> {
-    let mut context = Context::new(path);
-    std_context(&mut context);
-    let tokens = lex(path, text, &mut context)?;
+fn run(path: &String, text: &String, context: &mut Context) -> Result<Option<V>, E> {
+    let tokens = lex(path, text, context)?;
     // for (ln, line) in tokens.iter().enumerate() {
     //     print!("{ln} ");
     //     for token in line.iter() { print!("{token:?}\t"); }
     //     println!();
     // }
-    let ast = parse(path, tokens, &mut context)?;
+    let ast = parse(path, tokens, context)?;
     // println!("{ast}");
     // println!("{}", ast.display(0));
-    let (value, ret) = interpret(&ast, &mut context)?;
+    let (value, ret) = interpret(&ast, context)?;
     if ret == R::Return {
         return Ok(Some(value))
     }
     Ok(None)
 }
-fn runfile_context(path: &String) -> Result<Option<V>, E> {
+fn run_context(path: &String, text: &String) -> Result<Option<V>, (E, Trace)> {
+    let mut context = Context::new(path);
+    std_context(&mut context);
+    let res = run(path, text, &mut context);
+    match res {
+        Ok(v) => Ok(v),
+        Err(e) => Err((e, context.trace))
+    }
+}
+fn runfile_context(path: &String) -> Result<Option<V>, (E, Trace)> {
     match std::fs::read_to_string(path.as_str()) {
         Ok(text) => run_context(path, &text),
-        Err(e) => Err(E::TargetFile(path.clone())),
+        Err(e) => Err((E::TargetFile(path.clone()), vec![])),
     }
 }
 
@@ -50,7 +57,7 @@ fn main() {
                 Some(v) => println!("{v}"),
                 None => {}
             }
-            Err(e) => println!("{e}"),
+            Err((e, trace)) => println!("{e}\n{}", display_trace(trace)),
         }
         None => return,
     }
@@ -74,7 +81,7 @@ mod tests {
         assert!(Type::Scission(vec![Type::Int, Type::Float]) != Type::Int);
     }
     #[test]
-    fn samples_numbers() -> Result<(), E> {
+    fn samples_numbers() -> Result<(), (E, Trace)> {
         runfile_context(&String::from("samples/numbers.pr"))?;
         Ok(())
     }

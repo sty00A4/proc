@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use crate::*;
 
+pub type Trace = Vec<(Position, String)>;
+
 #[derive(Debug, Clone)]
 pub struct Scope {
     pub vars: HashMap<String, V>
@@ -20,7 +22,7 @@ impl Scope {
 pub struct Context {
     pub stack: Vec<Scope>,
     pub global: Scope,
-    pub trace: Vec<(Position, String)>,
+    pub trace: Trace,
     pub path: String,
 }
 impl Context {

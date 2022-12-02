@@ -39,3 +39,19 @@ impl std::fmt::Display for E {
         }
     }
 }
+
+pub fn display_trace(trace: Trace) -> String {
+    let mut s = String::new();
+    for (pos, path) in trace.iter() {
+        s.push_str("in ");
+        s.push_str(path.as_str());
+        s.push_str(":");
+        s.push_str(format!("{}", pos.0.start).as_str());
+        s.push_str(":");
+        s.push_str(format!("{}", pos.1.start).as_str());
+        s.push_str("\n");
+        s.push_str("CODE SNIPPET");
+        s.push_str("\n");
+    }
+    s
+}
