@@ -1,3 +1,4 @@
+use std::fs::read_to_string;
 use crate::*;
 
 #[derive(Clone, Debug)]
@@ -40,17 +41,30 @@ impl std::fmt::Display for E {
     }
 }
 
+pub fn get_line(pos: &Position, path: &String) -> String {
+    match read_to_string(path) {
+        Ok(text) => match text.split("\n").collect::<Vec<&str>>().get(pos.0.start..pos.0.end) {
+            Some(line) => line.join("\n"),
+            None => match text.split("\n").collect::<Vec<&str>>().last() {
+                Some(line) => line.to_string(),
+                None => "".into()
+            }
+        }
+        Err(e) => "FILE NOT FOUND".into()
+    }
+}
+
 pub fn display_trace(trace: Trace) -> String {
     let mut s = String::new();
     for (pos, path) in trace.iter() {
         s.push_str("in ");
         s.push_str(path.as_str());
         s.push_str(":");
-        s.push_str(format!("{}", pos.0.start).as_str());
+        s.push_str(format!("{}", pos.0.start + 1).as_str());
         s.push_str(":");
-        s.push_str(format!("{}", pos.1.start).as_str());
+        s.push_str(format!("{}", pos.1.start + 1).as_str());
         s.push_str("\n");
-        s.push_str("CODE SNIPPET");
+        s.push_str(get_line(pos, path).as_str());
         s.push_str("\n");
     }
     s
