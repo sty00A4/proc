@@ -2,22 +2,17 @@ use crate::*;
 
 #[derive(Clone, Debug)]
 pub enum E {
-    TargetFile(String),
-    FileNotFound(String),
     Todo(String),
+    TargetFile(String), FileNotFound(String),
     IllegalChar(String),
-    UnexpectedToken(T),
-    ExpectedToken(T, T),
-    ExpectedType(Type, Type),
-    ExpectedTypeArg(String, Type, Type),
+    UnexpectedToken(T), ExpectedToken(T, T),
+    ExpectedType(Type, Type), ExpectedTypeArg(String, Type, Type),
     ExpectedNode(N, N),
-    Binary(T, V, V),
-    InvalidBinaryOp(T),
-    Unary(T, V),
-    InvalidUnaryOp(T),
-    CannotAssign(N),
-    NotDefined(String),
+    Binary(T, V, V), InvalidBinaryOp(T),
+    Unary(T, V), InvalidUnaryOp(T),
+    CannotAssign(N), NotDefined(String),
     Cast(Type, V),
+    Rule(V, String),
 }
 impl std::fmt::Display for E {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -38,6 +33,7 @@ impl std::fmt::Display for E {
             Self::CannotAssign(id) => write!(f, "ERROR: cannot assign value to {}", id.name()),
             Self::NotDefined(id) => write!(f, "ERROR: {id} is not defined"),
             Self::Cast(typ, v) => write!(f, "ERROR: cannot cast {v:?} to {typ}"),
+            Self::Rule(v, name) => write!(f, "ERROR: rule {name} does not apply on {v:?}"),
         }
     }
 }

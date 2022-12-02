@@ -7,8 +7,9 @@ pub enum V {
     Int(i64), Float(f64), Bool(bool), String(String),
     Tuple(Vec<V>),
     Vector(Vec<V>, Type), Object(HashMap<String, V>),
-    Proc(Vec<(String, Option<Type>)>, Node),
+    Proc(Vec<(String, Option<Node>)>, Node),
     ForeignProc(Vec<(String, Option<Type>)>, fn(&mut Context) -> Result<V, E>),
+    Rule(String, String, Vec<Node>),
     Type(Type)
 }
 impl std::fmt::Display for V {
@@ -25,6 +26,7 @@ impl std::fmt::Display for V {
             Self::Object(v) => write!(f, "{{ {} }}", v.iter().map(|(k, v)| format!("{k} = {v}")).collect::<Vec<String>>().join(", ")),
             Self::Proc(_, body) => write!(f, "proc:{:?}", body as *const Node),
             Self::ForeignProc(_, func) => write!(f, "foreign-proc:{:?}", func as *const fn(&mut Context) -> Result<V, E>),
+            Self::Rule(name, _, rules) => write!(f, "{name}-rule:{:?}", rules as *const Vec<Node>),
             Self::Type(v) => write!(f, "{v}"),
         }
     }
@@ -43,6 +45,7 @@ impl std::fmt::Debug for V {
             Self::Object(v) => write!(f, "{{ {} }}", v.iter().map(|(k, v)| format!("{k} = {v:?}")).collect::<Vec<String>>().join(", ")),
             Self::Proc(_, body) => write!(f, "proc:{:?}", body as *const Node),
             Self::ForeignProc(_, func) => write!(f, "foreign-proc:{:?}", func as *const fn(&mut Context) -> Result<V, E>),
+            Self::Rule(name, _, rules) => write!(f, "{name}-rule:{:?}", rules as *const Vec<Node>),
             Self::Type(v) => write!(f, "{v:?}"),
         }
     }
@@ -80,22 +83,32 @@ impl PartialEq for V {
             }
             Self::Tuple(v1) => match other {
                 Self::Tuple(v2) => v1 == v2,
+                Self::Wildcard => true,
                 _ => false
             }
             Self::Vector(v1, t1) => match other {
                 Self::Vector(v2, t2) => v1 == v2 && t1 == t2,
+                Self::Wildcard => true,
                 _ => false
             }
             Self::Object(v1) => match other {
                 Self::Object(v2) => v1 == v2,
+                Self::Wildcard => true,
                 _ => false
             }
             Self::Proc(params1, body1) => match other {
                 Self::Proc(params2, body2) => (body1 as *const Node) == (body2 as *const Node),
+                Self::Wildcard => true,
                 _ => false
             }
             Self::ForeignProc(params1, func1) => match other {
                 Self::ForeignProc(params2, func2) => (func1 as *const fn(&mut Context) -> Result<V, E>) == (func2 as *const fn(&mut Context) -> Result<V, E>),
+                Self::Wildcard => true,
+                _ => false
+            }
+            Self::Rule(name1, _, rules1) => match other {
+                Self::Rule(name2, _, rules2) => name1 == name2 && (rules1 as *const Vec<Node>) == (rules2 as *const Vec<Node>),
+                Self::Wildcard => true,
                 _ => false
             }
             Self::Type(v1) => match other {
@@ -119,6 +132,7 @@ impl V {
             Self::Object(_) => Type::Object,
             Self::Proc(_, _) => Type::Proc,
             Self::ForeignProc(_, _) => Type::ForeignProc,
+            Self::Rule(name, _, _) => Type::Rule(name.clone()),
             Self::Type(_) => Type::Type,
         }
     }
@@ -129,7 +143,7 @@ pub enum Type {
     Any, Undefiend,
     Int, Float, Bool, String,
     Tuple(Vec<Type>), Vector(Box<Type>), Object,
-    Proc, ForeignProc,
+    Proc, ForeignProc, Rule(String),
     Type,
     Union(Vec<Type>), Scission(Vec<Type>)
 }
@@ -185,8 +199,13 @@ impl Type {
                 V::Vector(_, _) => Some(value.clone()),
                 _ => None
             }
+            Type::Object => None,
+            Type::Proc => None,
+            Type::ForeignProc => None,
+            Type::Rule(_) => None,
             Type::Type => Some(V::Type(value.typ())),
-            _ => None
+            Type::Union(_) => None,
+            Type::Scission(_) => None,
         }
     }
 }
@@ -209,6 +228,7 @@ impl std::fmt::Debug for Type {
             Self::Object => write!(f, "obj"),
             Self::Proc => write!(f, "proc"),
             Self::ForeignProc => write!(f, "foreign-proc"),
+            Self::Rule(name) => write!(f, "{name}-rule"),
             Self::Type => write!(f, "type"),
             Self::Union(types) => write!(f, "union[{}]", types.iter().map(|x| x.to_string()).collect::<Vec<String>>().join("|")),
             Self::Scission(types) => write!(f, "scission[{}]", types.iter().map(|x| x.to_string()).collect::<Vec<String>>().join("|")),
@@ -284,6 +304,14 @@ impl PartialEq for Type {
             }
             Self::ForeignProc => match other {
                 Self::ForeignProc => true,
+                Self::Any => true,
+                Self::Union(_) => other == self,
+                Self::Scission(_) => other == self,
+                _ => false
+            }
+            Self::Rule(name1) => match other {
+                // todo rule comp, node comp
+                Self::Rule(name2) => name1 == name2,
                 Self::Any => true,
                 Self::Union(_) => other == self,
                 Self::Scission(_) => other == self,

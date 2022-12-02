@@ -180,6 +180,23 @@ pub fn unary(op: &T, value: &V, pos: &Position, context: &mut Context) -> Result
     Err(E::Unary(op.clone(), value.clone()))
 }
 
+pub fn apply_rule(rule_value: &V, value: &V, pos: &Position, context: &mut Context) -> Result<(), E> {
+    if let V::Rule(name, id, rules) = rule_value {
+        let mut rule_context = Context::proc(context);
+        rule_context.set(id, value);
+        for rule in rules.iter() {
+            let (case, _) = interpret(rule, &mut rule_context)?;
+            if Type::Bool.cast(&case).or_else(|| Some(V::Bool(false))).unwrap() == V::Bool(false) {
+                context.trace(rule.1.clone());
+                return Err(E::Rule(value.clone(), name.clone()))
+            }
+        }
+        return Ok(())
+    }
+    context.trace(pos.clone());
+    Err(E::ExpectedType(Type::Rule("<ANY>".into()), rule_value.typ()))
+}
+
 pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> {
     match input_node {
         // atom
@@ -277,15 +294,23 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                     let mut old_context = Context::from(context);
                     *context = Context::proc(context);
                     for i in 0..params.len() {
-                        let (param, typ_) = &params[i];
+                        let (param, type_node_) = &params[i];
                         let value = match arg_values.get(i) {
                             Some(v) => v.clone(),
                             None => V::Null
                         };
-                        if let Some(typ) = typ_ {
-                            if typ != &value.typ() {
-                                context.trace(pos.clone());
-                                return Err(E::ExpectedTypeArg(format!("{i}"), typ.clone(), value.typ()))
+                        if let Some(type_node) = type_node_ {
+                            let (typ_, _) = interpret(type_node, context)?;
+                            if let V::Type(typ) = typ_ {
+                                if typ != value.typ() {
+                                    context.trace(pos.clone());
+                                    return Err(E::ExpectedTypeArg(format!("{i}"), typ.clone(), value.typ()))
+                                }
+                            } else if let Type::Rule(_) = typ_.typ() {
+                                apply_rule(&typ_, &value, &type_node.1, context)?;
+                            } else {
+                                context.trace(type_node.1.clone());
+                                return Err(E::ExpectedType(Type::Union(vec![Type::Type, Type::Rule("<ANY>".into())]), typ_.typ()))
                             }
                         }
                         context.set(param, &value);
@@ -465,14 +490,16 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
         }
         Node(N::Proc { name: name_node, params: param_nodes, body: body_node }, pos) => {
             if let Node(N::ID(id), name_pos) = name_node.as_ref() {
-                let mut params: Vec<(String, Option<Type>)> = vec![];
+                let mut params: Vec<(String, Option<Node>)> = vec![];
                 for (param_node, type_node_) in param_nodes {
                     if let Node(N::ID(id), param_pos) = param_node {
-                        let mut typ: Option<Type> = None;
+                        let mut typ: Option<Node> = None;
                         if let Some(type_node) = type_node_ {
                             let (type_value, _) = interpret(type_node, context)?;
-                            if let V::Type(type_value_typ) = type_value {
-                                typ = Some(type_value_typ);
+                            if let V::Type(_) = type_value {
+                                typ = Some(type_node.clone());
+                            } else if let V::Rule(_, _, _) = type_value {
+                                typ = Some(type_node.clone());
                             } else {
                                 context.trace(type_node.1.clone());
                                 return Err(E::ExpectedType(Type::Type, type_value.typ()))
@@ -484,8 +511,20 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                         return Err(E::ExpectedNode(N::ID("_".into()), param_node.0.clone()))
                     }
                 }
-                context.set(id, &V::Proc(params.clone(), body_node.as_ref().clone()));
+                context.def(id, &V::Proc(params.clone(), body_node.as_ref().clone()));
                 return Ok((V::Null, R::None))
+            }
+            context.trace(name_node.1.clone());
+            Err(E::ExpectedNode(N::ID("_".into()), name_node.0.clone()))
+        }
+        Node(N::Rule { name: name_node, id: id_node, rules }, _) => {
+            if let Node(N::ID(name), name_pos) = name_node.as_ref() {
+                if let Node(N::ID(id), id_pos) = id_node.as_ref() {
+                    context.def(name, &V::Rule(name.clone(), id.clone(), rules.clone()));
+                    return Ok((V::Null, R::None))
+                }
+                context.trace(id_node.1.clone());
+                return Err(E::ExpectedNode(N::ID("_".into()), id_node.0.clone()))
             }
             context.trace(name_node.1.clone());
             Err(E::ExpectedNode(N::ID("_".into()), name_node.0.clone()))
@@ -502,15 +541,23 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                     let mut old_context = Context::from(context);
                     *context = Context::proc(context);
                     for i in 0..params.len() {
-                        let (param, typ_) = &params[i];
+                        let (param, type_node_) = &params[i];
                         let value = match arg_values.get(i) {
                             Some(v) => v.clone(),
                             None => V::Null
                         };
-                        if let Some(typ) = typ_ {
-                            if typ != &value.typ() {
-                                context.trace(pos.clone());
-                                return Err(E::ExpectedTypeArg(format!("{i}"), typ.clone(), value.typ()))
+                        if let Some(type_node) = type_node_ {
+                            let (typ_, _) = interpret(type_node, context)?;
+                            if let V::Type(typ) = typ_ {
+                                if typ != value.typ() {
+                                    context.trace(pos.clone());
+                                    return Err(E::ExpectedTypeArg(format!("{i}"), typ.clone(), value.typ()))
+                                }
+                            } else if let Type::Rule(_) = typ_.typ() {
+                                apply_rule(&typ_, &value, &type_node.1, context)?;
+                            } else {
+                                context.trace(type_node.1.clone());
+                                return Err(E::ExpectedType(Type::Union(vec![Type::Type, Type::Rule("<ANY>".into())]), typ_.typ()))
                             }
                         }
                         context.set(param, &value);
