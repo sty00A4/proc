@@ -209,7 +209,7 @@ impl Parser {
                 Layer::Binary(vec![T::EQ, T::NE, T::LT, T::LE, T::GT, T::GE, T::Is, T::Contains]),
                 Layer::Binary(vec![T::Add, T::Sub]),
                 Layer::Binary(vec![T::Mul, T::Div, T::Mod]),
-                Layer::UnaryLeft(vec![T::Add, T::Sub]),
+                Layer::UnaryLeft(vec![T::Sub]),
                 Layer::UnaryLeft(vec![T::Len]),
                 Layer::UnaryRight(vec![T::Safe]),
                 Layer::Binary(vec![T::Option]),
