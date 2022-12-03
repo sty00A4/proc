@@ -458,19 +458,17 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                                     Err(E::IndexRange(values.len(), index))
                                 }
                             }
-                        } else {
-                            if values.len() as i64 - index >= 0 {
-                                match values.get((values.len() as i64 - index) as usize) {
-                                    Some(value) => Ok((value.clone(), R::None)),
-                                    None => {
-                                        context.trace(field_node.1.clone());
-                                        Err(E::IndexRange(values.len(), index))
-                                    }
+                        } else if values.len() as i64 - index >= 0 {
+                            match values.get((values.len() as i64 - index) as usize) {
+                                Some(value) => Ok((value.clone(), R::None)),
+                                None => {
+                                    context.trace(field_node.1.clone());
+                                    Err(E::IndexRange(values.len(), index))
                                 }
-                            } else {
-                                context.trace(field_node.1.clone());
-                                Err(E::IndexRange(values.len(), index))
                             }
+                        } else {
+                            context.trace(field_node.1.clone());
+                            Err(E::IndexRange(values.len(), index))
                         }
                         _ => {
                             context.trace(field_node.1.clone());
