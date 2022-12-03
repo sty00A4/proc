@@ -80,7 +80,7 @@ pub fn _print(context: &mut Context, pos: &Position) -> Result<V, E> {
 pub fn _assert(context: &mut Context, pos: &Position) -> Result<V, E> {
     let x = context.get(&String::from("x"));
     if let Some(x) = x {
-        if Type::Bool.cast(x).unwrap_or_else(|| V::Bool(false)) == V::Bool(false) {
+        if V::bool(x) == V::Bool(false) {
             context.trace(pos.clone());
             return Err(E::Assertion)
         }

@@ -187,7 +187,7 @@ pub fn check_rule(rule_value: &V, value: &V, pos: &Position, context: &mut Conte
         rule_context.set(id, value);
         for (rule, _) in rules.iter() {
             let (case, _) = interpret(rule, &mut rule_context)?;
-            if Type::Bool.cast(&case).unwrap_or_else(|| V::Bool(false)) == V::Bool(false) {
+            if V::bool(&case) == V::Bool(false) {
                 context.trace(rule.1.clone());
                 return Err(E::Rule(value.clone(), name.clone()))
             }
@@ -204,7 +204,7 @@ pub fn apply_rule(rule_value: &V, value: &V, pos: &Position, context: &mut Conte
         rule_context.set(id, value);
         for (rule, new) in rules.iter() {
             let (case, _) = interpret(rule, &mut rule_context)?;
-            if Type::Bool.cast(&case).unwrap_or_else(|| V::Bool(false)) == V::Bool(false) {
+            if V::bool(&case) == V::Bool(false) {
                 match new {
                     Some(new) => {
                         let res = interpret(new, &mut rule_context);
@@ -754,7 +754,7 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
         }
         Node(N::If { cond: cond_node, body, else_body }, _) => {
             let (cond, _) = interpret(cond_node, context)?;
-            if Type::Bool.cast(&cond).unwrap_or_else(|| V::Bool(false)) == V::Bool(true) {
+            if V::bool(&cond) == V::Bool(true) {
                 return interpret(body, context)
             } else if let Some(else_body) = else_body {
                 return interpret(else_body, context)
@@ -763,7 +763,7 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
         }
         Node(N::While { cond: cond_node, body }, _) => {
             let (mut cond, _) = interpret(cond_node, context)?;
-            while Type::Bool.cast(&cond).unwrap_or_else(|| V::Bool(false)) == V::Bool(true) {
+            while V::bool(&cond) == V::Bool(true) {
                 let (value, ret) = interpret(body, context)?;
                 if ret == R::Return { return Ok((value, ret)) }
                 if ret == R::Break { break }
