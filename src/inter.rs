@@ -671,5 +671,46 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
             }
             Ok((V::Null, R::None))
         }
+        Node(N::For { param: param_node, iter: iter_node, body }, pos) => {
+            if let Node(N::ID(param), param_pos) = param_node.as_ref() {
+                let (iter, _) = interpret(iter_node, context)?;
+                match iter {
+                    V::Vector(values, _) => {
+                        for v in values.iter() {
+                            context.set(param, v);
+                            let (value, ret) = interpret(body, context)?;
+                            if ret == R::Return { return Ok((value, ret)) }
+                            if ret == R::Break { break }
+                        }
+                        Ok((V::Null, R::None))
+                    }
+                    V::Tuple(values) => {
+                        for v in values.iter() {
+                            context.set(param, v);
+                            let (value, ret) = interpret(body, context)?;
+                            if ret == R::Return { return Ok((value, ret)) }
+                            if ret == R::Break { break }
+                        }
+                        Ok((V::Null, R::None))
+                    }
+                    V::Object(values) => {
+                        for (k, v) in values.iter() {
+                            context.set(param, &V::Tuple(vec![V::String(k.clone()), v.clone()]));
+                            let (value, ret) = interpret(body, context)?;
+                            if ret == R::Return { return Ok((value, ret)) }
+                            if ret == R::Break { break }
+                        }
+                        Ok((V::Null, R::None))
+                    }
+                    _ => {
+                        context.trace(iter_node.1.clone());
+                        Err(E::InvalidIterator(iter.typ()))
+                    }
+                }
+            } else {
+                context.trace(param_node.1.clone());
+                Err(E::ExpectedNode(N::ID("_".into()), param_node.0.clone()))
+            }
+        }
     }
 }

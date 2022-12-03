@@ -11,7 +11,7 @@ static LETTERS: [&str; 53] = [
 #[derive(Debug, Clone, PartialEq)]
 pub enum T {
     EOF, EOL, Indent(u16),
-    Rule, Container, Proc, If, Else, While,
+    Rule, Container, Proc, If, Else, While, For,
     Var, Global,
     Return, Break, Continue,
 //  !     =       :    <-  ->   #    ?     |       .      ..     ,
@@ -48,6 +48,7 @@ impl T {
             Self::If => "'if'",
             Self::Else => "'else'",
             Self::While => "'while'",
+            Self::For => "'for'",
             Self::Var => "'var'",
             Self::Global => "'global'",
             Self::Return => "'return'",
@@ -284,6 +285,11 @@ pub fn lex(path: &String, text: &String, context: &mut Context) -> Result<Vec<Ve
                         tokens[ln].push(Token(T::SubAssign, Position::new(ln..ln+1, start..col)));
                         continue
                     }
+                    if line.get(col..col+1) == Some(">") {
+                        col += 1;
+                        tokens[ln].push(Token(T::Out, Position::new(ln..ln+1, start..col)));
+                        continue
+                    }
                     tokens[ln].push(Token(T::Sub, Position::new(ln..ln+1, start..col)));
                 }
                 "*" => {
@@ -342,6 +348,7 @@ pub fn lex(path: &String, text: &String, context: &mut Context) -> Result<Vec<Ve
                             "if" => T::If,
                             "else" => T::Else,
                             "while" => T::While,
+                            "for" => T::For,
                             "var" => T::Var,
                             "global" => T::Global,
                             "return" => T::Return,

@@ -13,6 +13,7 @@ pub enum E {
     Unary(T, V), InvalidUnaryOp(T),
     CannotAssign(N), NotDefined(String),
     Cast(Type, V),
+    InvalidIterator(Type),
     Rule(V, String), RuleCast(V, String),
     InvalidField(Type, Type), InvalidHead(Type), FieldNotFound(String),
     Assertion, Test
@@ -36,6 +37,7 @@ impl std::fmt::Display for E {
             Self::CannotAssign(id) => write!(f, "ERROR: cannot assign value to {}", id.name()),
             Self::NotDefined(id) => write!(f, "ERROR: {id} is not defined"),
             Self::Cast(typ, v) => write!(f, "ERROR: cannot cast {v:?} to {typ}"),
+            Self::InvalidIterator(typ) => write!(f, "ERROR: cannot iterate over {typ}"),
             Self::Rule(v, name) => write!(f, "ERROR: rule {name} does not apply on {v:?}"),
             Self::RuleCast(v, name) => write!(f, "ERROR: cannot cast {v:?} to {name}"),
             Self::InvalidField(head, field) => write!(f, "ERROR: cannot index {head} by {field}"),

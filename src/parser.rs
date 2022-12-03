@@ -15,6 +15,7 @@ pub enum N {
     Return(Box<Node>), Break, Continue,
     Call { id: Box<Node>, args: Vec<Node> }, CallExpr { id: Box<Node>, args: Vec<Node> },
     If { cond: Box<Node>, body: Box<Node>, else_body: Option<Box<Node>> }, While { cond: Box<Node>, body: Box<Node> },
+    For { param: Box<Node>, iter: Box<Node>, body: Box<Node> },
     IfExpr { cond: Box<Node>, node: Box<Node>, else_node: Box<Node> },
     Proc { name: Box<Node>, params: ProcParams, body: Box<Node> },
     Rule { name: Box<Node>, id: Box<Node>, rules: Rules },
@@ -48,6 +49,7 @@ impl N {
             Self::CallExpr { id:_, args:_ } => "call expression",
             Self::If { cond:_, body:_, else_body:_ } => "if statement",
             Self::While { cond:_, body:_ } => "while statement",
+            Self::For { param:_, iter:_, body:_ } => "for statement",
             Self::IfExpr { cond:_, node:_, else_node:_ } => "if expression",
             Self::Proc { name:_, params:_, body:_ } => "procedure definition",
             Self::Rule { name:_, id:_, rules:_ } => "rule definition",
@@ -98,6 +100,7 @@ impl std::fmt::Display for N {
             },
             Self::IfExpr { cond, node, else_node } => write!(f, "{node} if {cond} else {else_node}"),
             Self::While { cond, body } => write!(f, "while {cond} {body}"),
+            Self::For { param, iter, body } => write!(f, "for {param} in {iter} {body}"),
             Self::Proc { name, params, body } => write!(f, "proc {name} <- {} {body}",
             params.iter().map(|(id, typ, apply)|
                 match typ {
@@ -167,6 +170,7 @@ impl Node {
             N::IfExpr { cond, node, else_node } => format!("{} if {} else {}", node.display(indent),
             cond.display(indent), else_node.display(indent)),
             N::While { cond, body } => format!("{s}while {} \n{}", cond.display(indent), body.display(indent + 1)),
+            N::For { param, iter, body } => format!("{s}for {} in {} \n{}", param.display(indent), iter.display(indent), body.display(indent + 1)),
             N::Proc { name, params, body } => format!("{s}proc {} <- {} \n{}", name.display(indent),
             params.iter().map(|(id, typ, apply)|
                 match typ {
@@ -402,6 +406,26 @@ impl Parser {
                 let body = Node(N::Body(nodes), Position::new(body_start_ln..self.ln, body_start_col..self.col));
                 Ok(Node(N::While {
                     cond: Box::new(cond), body: Box::new(body)
+                }, Position::new(start_ln..self.ln, start_col..self.col)))
+            }
+            T::For => {
+                let (start_ln, start_col) = (self.ln, self.col);
+                self.advance();
+                let param = self.atom(context)?;
+                self.advance_expect(T::Out, context)?;
+                let iter = self.expr(context)?;
+                self.expect(T::EOL, context)?;
+                self.advance_ln();
+                let mut nodes: Vec<Node> = vec![];
+                let (body_start_ln, body_start_col) = (self.ln, self.col);
+                while let T::Indent(i) = self.token() {
+                    if *i <= indent { break }
+                    let node = self.stat(0, context)?;
+                    nodes.push(node);
+                }
+                let body = Node(N::Body(nodes), Position::new(body_start_ln..self.ln, body_start_col..self.col));
+                Ok(Node(N::For {
+                    param: Box::new(param), iter: Box::new(iter), body: Box::new(body)
                 }, Position::new(start_ln..self.ln, start_col..self.col)))
             }
             T::Return => {
