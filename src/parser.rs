@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use crate::*;
 
-pub type ProcParams = Vec<(Node, Option<Node>)>;
+pub type ProcParams = Vec<(Node, Option<Node>, bool)>;
 
 #[derive(Debug, Clone)]
 pub enum N {
@@ -17,7 +17,7 @@ pub enum N {
     If { cond: Box<Node>, body: Box<Node>, else_body: Option<Box<Node>> }, While { cond: Box<Node>, body: Box<Node> },
     IfExpr { cond: Box<Node>, node: Box<Node>, else_node: Box<Node> },
     Proc { name: Box<Node>, params: ProcParams, body: Box<Node> },
-    Rule { name: Box<Node>, id: Box<Node>, rules: Vec<Node> },
+    Rule { name: Box<Node>, id: Box<Node>, rules: Rules },
 }
 impl N {
     pub fn name(&self) -> &str {
@@ -97,13 +97,17 @@ impl std::fmt::Display for N {
             Self::IfExpr { cond, node, else_node } => write!(f, "{node} if {cond} else {else_node}"),
             Self::While { cond, body } => write!(f, "while {cond} {body}"),
             Self::Proc { name, params, body } => write!(f, "proc {name} <- {} {body}",
-            params.iter().map(|(id, typ)|
+            params.iter().map(|(id, typ, apply)|
                 match typ {
-                    Some(typv) => format!("{id} : {typv}"),
+                    Some(typv) => format!("{id} : {typv}{}", if *apply { "!" } else { "" }),
                     None => format!("{id}")
                 }
             ).collect::<Vec<String>>().join(", ")),
-            Self::Rule { name, id, rules } => write!(f, "rule {name} <- {id}; {}", rules.iter().map(|x| x.to_string())
+            Self::Rule { name, id, rules } => write!(f, "rule {name} <- {id}; {}",
+            rules.iter().map(|(rule, new)| match new {
+                Some(new) => format!("{rule} : {new}"),
+                None => format!("{rule}")
+            })
             .collect::<Vec<String>>().join("; "))
         }
     }
@@ -161,14 +165,18 @@ impl Node {
             cond.display(indent), else_node.display(indent)),
             N::While { cond, body } => format!("{s}while {} \n{}", cond.display(indent), body.display(indent + 1)),
             N::Proc { name, params, body } => format!("{s}proc {} <- {} \n{}", name.display(indent),
-            params.iter().map(|(id, typ)|
+            params.iter().map(|(id, typ, apply)|
                 match typ {
-                    Some(typv) => format!("{} : {}", id.display(indent), typv.display(indent)),
+                    Some(typv) => format!("{} : {}{}", id.display(indent), typv.display(indent), if *apply { "!" } else { "" }),
                     None => format!("{}", id.display(indent))
                 }
             ).collect::<Vec<String>>().join(" "), body.display(indent + 1)),
             N::Rule { name, id, rules } => format!("{s}rule {} <- {}\n{}",
-            name.display(indent), id.display(indent), rules.iter().map(|x| format!("{s}    {}", x.display(indent)))
+            name.display(indent), id.display(indent),
+            rules.iter().map(|(rule, new)| match new {
+                Some(new) => format!("{} : {}", rule.display(indent), new.display(indent)),
+                None => format!("{}", rule.display(indent))
+            })
             .collect::<Vec<String>>().join("\n"))
         }
     }
@@ -417,18 +425,23 @@ impl Parser {
                 let (start_ln, start_col) = (self.ln, self.col);
                 self.advance();
                 let name = self.atom(context)?;
-                let mut params: Vec<(Node, Option<Node>)> = vec![];
+                let mut params: ProcParams = vec![];
                 if self.token() == &T::In {
                     self.advance();
                     while self.token() != &T::EOL {
                         let mut typ: Option<Node> = None;
+                        let mut apply = false;
                         let id = self.atom(context)?;
                         if self.token() == &T::Rep {
                             self.advance();
                             typ = Some(self.operation(self.ops(0), 0, context)?);
+                            if self.token() == &T::Call {
+                                apply = true;
+                                self.advance();
+                            }
                         }
                         self.advance_if(T::Sep, context);
-                        params.push((id, typ));
+                        params.push((id, typ, apply));
                     }
                 }
                 self.expect(T::EOL, context)?;
@@ -453,13 +466,18 @@ impl Parser {
                 let id = self.atom(context)?;
                 self.expect(T::EOL, context)?;
                 self.advance_ln();
-                let mut rules: Vec<Node> = vec![];
+                let mut rules: Rules = vec![];
                 while let T::Indent(i) = self.token() {
                     if *i <= indent { break }
                     self.advance();
                     let node = self.expr(context)?;
+                    let mut new: Option<Node> = None;
+                    if self.token() == &T::Rep {
+                        self.advance();
+                        new = Some(self.expr(context)?);
+                    }
                     self.expect(T::EOL, context)?;
-                    rules.push(node);
+                    rules.push((node, new));
                     self.advance_ln();
                 }
                 Ok(Node(N::Rule {

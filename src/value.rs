@@ -1,7 +1,9 @@
 use std::{collections::{HashSet, HashMap}, hash::Hash};
 use crate::*;
 
-type ProcFn = fn(&mut Context, &Position) -> Result<V, E>;
+pub type ProcFn = fn(&mut Context, &Position) -> Result<V, E>;
+pub type ProcValueParams = Vec<(String, Option<Node>, bool)>;
+pub type Rules = Vec<(Node, Option<Node>)>;
 
 #[derive(Clone)]
 pub enum V {
@@ -9,9 +11,9 @@ pub enum V {
     Int(i64), Float(f64), Bool(bool), String(String),
     Tuple(Vec<V>),
     Vector(Vec<V>, Type), Object(HashMap<String, V>),
-    Proc(Vec<(String, Option<Node>)>, Node),
-    ForeignProc(Vec<(String, Option<Type>)>, ProcFn),
-    Rule(String, String, Vec<Node>),
+    Proc(ProcValueParams, Node),
+    ForeignProc(ProcValueParams, ProcFn),
+    Rule(String, String, Rules),
     Type(Type)
 }
 impl std::fmt::Display for V {
@@ -28,7 +30,7 @@ impl std::fmt::Display for V {
             Self::Object(v) => write!(f, "{{ {} }}", v.iter().map(|(k, v)| format!("{k} = {v}")).collect::<Vec<String>>().join(", ")),
             Self::Proc(_, body) => write!(f, "proc:{:?}", body as *const Node),
             Self::ForeignProc(_, func) => write!(f, "foreign-proc:{:?}", func as *const ProcFn),
-            Self::Rule(name, _, rules) => write!(f, "{name}-rule:{:?}", rules as *const Vec<Node>),
+            Self::Rule(name, _, rules) => write!(f, "{name}-rule:{:?}", rules as *const Rules),
             Self::Type(v) => write!(f, "{v}"),
         }
     }
@@ -47,7 +49,7 @@ impl std::fmt::Debug for V {
             Self::Object(v) => write!(f, "{{ {} }}", v.iter().map(|(k, v)| format!("{k} = {v:?}")).collect::<Vec<String>>().join(", ")),
             Self::Proc(_, body) => write!(f, "proc:{:?}", body as *const Node),
             Self::ForeignProc(_, func) => write!(f, "foreign-proc:{:?}", func as *const ProcFn),
-            Self::Rule(name, _, rules) => write!(f, "{name}-rule:{:?}", rules as *const Vec<Node>),
+            Self::Rule(name, _, rules) => write!(f, "{name}-rule:{:?}", rules as *const Rules),
             Self::Type(v) => write!(f, "{v:?}"),
         }
     }
@@ -109,7 +111,8 @@ impl PartialEq for V {
                 _ => false
             }
             Self::Rule(name1, _, rules1) => match other {
-                Self::Rule(name2, _, rules2) => name1 == name2 && (rules1 as *const Vec<Node>) == (rules2 as *const Vec<Node>),
+                Self::Rule(name2, _, rules2) => name1 == name2 &&
+                (rules1 as *const Rules) == (rules2 as *const Rules),
                 Self::Wildcard => true,
                 _ => false
             }

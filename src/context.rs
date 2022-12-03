@@ -92,9 +92,9 @@ pub fn _assert(context: &mut Context, pos: &Position) -> Result<V, E> {
 }
 pub fn std_context(context: &mut Context) {
     context.def(&String::from("print"), &V::ForeignProc(vec![
-        ("x".into(), None)
+        ("x".into(), None, false)
     ], _print));
     context.def(&String::from("assert"), &V::ForeignProc(vec![
-        ("x".into(), None)
+        ("x".into(), None, false)
     ], _assert));
 }

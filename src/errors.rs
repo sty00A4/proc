@@ -13,7 +13,7 @@ pub enum E {
     Unary(T, V), InvalidUnaryOp(T),
     CannotAssign(N), NotDefined(String),
     Cast(Type, V),
-    Rule(V, String),
+    Rule(V, String), RuleCast(V, String),
     Assertion
 }
 impl std::fmt::Display for E {
@@ -36,6 +36,7 @@ impl std::fmt::Display for E {
             Self::NotDefined(id) => write!(f, "ERROR: {id} is not defined"),
             Self::Cast(typ, v) => write!(f, "ERROR: cannot cast {v:?} to {typ}"),
             Self::Rule(v, name) => write!(f, "ERROR: rule {name} does not apply on {v:?}"),
+            Self::RuleCast(v, name) => write!(f, "ERROR: cannot cast {v:?} to {name}"),
             Self::Assertion => write!(f, "ERROR: assertion failed"),
         }
     }
