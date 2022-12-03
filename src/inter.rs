@@ -386,6 +386,7 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
             }
         }
         Node(N::CallExpr { id: id_node, args }, pos) => {
+            context.trace(pos.clone());
             let (proc, _) = interpret(id_node, context)?;
             let mut arg_values: Vec<V> = vec![];
             for arg in args.iter() {
@@ -625,6 +626,7 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
             Err(E::ExpectedNode(N::ID("_".into()), name_node.0.clone()))
         }
         Node(N::Call { id: id_node, args }, pos) => {
+            context.trace(pos.clone());
             let (proc, _) = interpret(id_node, context)?;
             let mut arg_values: Vec<V> = vec![];
             for arg in args.iter() {

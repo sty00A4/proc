@@ -97,4 +97,5 @@ pub fn std_context(context: &mut Context) {
     context.def(&String::from("assert"), &V::ForeignProc(vec![
         ("x".into(), None, false)
     ], _assert));
+    // todo more std functions: io, fs, language primitivesss
 }
