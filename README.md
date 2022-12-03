@@ -61,22 +61,22 @@ Even though the language is already functional, it is far from being where I wan
 *If anyone wants to help with the language, [contact](#contact) me :)*
 
 ### Language relevant
-- [ ] **Containers!**
-- [ ] Field assignment
-- [ ] Position fix!
-- [ ] Type procedures (`str.join`, `vec.sum`, ...)
+- **Containers!**
+- Field assignment
+- Position fix!
+- Type procedures (`str.join`, `vec.sum`, ...)
 ### Planned Features
-- [ ] Error handeling
-    - [ ] error value type
-    - [ ] `throw` statement
-    - [ ] `try ... catch ...` statement
+- Error handeling
+    - error value type
+    - `throw` statement
+    - `try ... catch ...` statement
 ### Other
-- [ ] Rust macros for *value* and *type* generation
-- [ ] Built-in procedure containers
-    - [ ] io
-    - [ ] fs
-    - [ ] http
-    - [ ] lang *(the language itself: **parser**, **lexer**, ...)*
+- Rust macros for *value* and *type* generation
+- Built-in procedure containers
+    - io
+    - fs
+    - http
+    - lang *(the language itself: **parser**, **lexer**, ...)*
 
 # Contact
 
