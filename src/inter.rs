@@ -443,6 +443,76 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                     context.trace(field_node.1.clone());
                     Err(E::InvalidField(head.typ(), field.typ()))
                 }
+                V::Vector(values, _) => if let Node(N::ID(field), field_pos) = field_node.as_ref() {
+                    // todo
+                    context.trace(field_pos.clone());
+                    Err(E::FieldNotFound(field.clone()))
+                } else {
+                    let (field, _) = interpret(field_node, context)?;
+                    match field {
+                        V::Int(index) => if index >= 0 {
+                            match values.get(index as usize) {
+                                Some(value) => Ok((value.clone(), R::None)),
+                                None => {
+                                    context.trace(field_node.1.clone());
+                                    Err(E::IndexRange(values.len(), index))
+                                }
+                            }
+                        } else {
+                            if values.len() as i64 - index >= 0 {
+                                match values.get((values.len() as i64 - index) as usize) {
+                                    Some(value) => Ok((value.clone(), R::None)),
+                                    None => {
+                                        context.trace(field_node.1.clone());
+                                        Err(E::IndexRange(values.len(), index))
+                                    }
+                                }
+                            } else {
+                                context.trace(field_node.1.clone());
+                                Err(E::IndexRange(values.len(), index))
+                            }
+                        }
+                        _ => {
+                            context.trace(field_node.1.clone());
+                            Err(E::InvalidField(head.typ(), field.typ()))
+                        }
+                    }
+                }
+                V::Tuple(values) => if let Node(N::ID(field), field_pos) = field_node.as_ref() {
+                    // todo
+                    context.trace(field_pos.clone());
+                    Err(E::FieldNotFound(field.clone()))
+                } else {
+                    let (field, _) = interpret(field_node, context)?;
+                    match field {
+                        V::Int(index) => if index >= 0 {
+                            match values.get(index as usize) {
+                                Some(value) => Ok((value.clone(), R::None)),
+                                None => {
+                                    context.trace(field_node.1.clone());
+                                    Err(E::IndexRange(values.len(), index))
+                                }
+                            }
+                        } else {
+                            if values.len() as i64 - index >= 0 {
+                                match values.get((values.len() as i64 - index) as usize) {
+                                    Some(value) => Ok((value.clone(), R::None)),
+                                    None => {
+                                        context.trace(field_node.1.clone());
+                                        Err(E::IndexRange(values.len(), index))
+                                    }
+                                }
+                            } else {
+                                context.trace(field_node.1.clone());
+                                Err(E::IndexRange(values.len(), index))
+                            }
+                        }
+                        _ => {
+                            context.trace(field_node.1.clone());
+                            Err(E::InvalidField(head.typ(), field.typ()))
+                        }
+                    }
+                }
                 _ => {
                     context.trace(head_node.1.clone());
                     Err(E::InvalidHead(head.typ()))

@@ -16,6 +16,7 @@ pub enum E {
     InvalidIterator(Type),
     Rule(V, String), RuleCast(V, String),
     InvalidField(Type, Type), InvalidHead(Type), FieldNotFound(String),
+    IndexRange(usize, i64),
     Assertion, Test
 }
 impl std::fmt::Display for E {
@@ -43,6 +44,7 @@ impl std::fmt::Display for E {
             Self::InvalidField(head, field) => write!(f, "ERROR: cannot index {head} by {field}"),
             Self::InvalidHead(head) => write!(f, "ERROR: cannot index {head}"),
             Self::FieldNotFound(field) => write!(f, "ERROR: field {field} not found"),
+            Self::IndexRange(max, index) => write!(f, "ERROR: index {index} out of range of {max}"),
             Self::Assertion => write!(f, "ERROR: assertion failed"),
             Self::Test => write!(f, "ERROR: test proc not found"),
         }
