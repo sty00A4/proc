@@ -17,8 +17,8 @@ pub enum N {
     If { cond: Box<Node>, body: Box<Node>, else_body: Option<Box<Node>> }, While { cond: Box<Node>, body: Box<Node> },
     For { param: Box<Node>, iter: Box<Node>, body: Box<Node> },
     IfExpr { cond: Box<Node>, node: Box<Node>, else_node: Box<Node> },
-    Proc { name: Box<Node>, params: ProcParams, body: Box<Node> },
-    Rule { name: Box<Node>, id: Box<Node>, rules: Rules },
+    Proc { name: Box<Node>, params: ProcParams, body: Box<Node> }, Rule { name: Box<Node>, id: Box<Node>, rules: Rules },
+    Container { name: Box<Node>, body: Box<Node> },
     Field { head: Box<Node>, field: Box<Node> },
 }
 impl N {
@@ -53,6 +53,7 @@ impl N {
             Self::IfExpr { cond:_, node:_, else_node:_ } => "if expression",
             Self::Proc { name:_, params:_, body:_ } => "procedure definition",
             Self::Rule { name:_, id:_, rules:_ } => "rule definition",
+            Self::Container { name:_, body:_ } => "container definition",
             Self::Field { head:_, field:_ } => "field",
         }
     }
@@ -114,6 +115,7 @@ impl std::fmt::Display for N {
                 None => format!("{rule}")
             })
             .collect::<Vec<String>>().join("; ")),
+            Self::Container { name, body } => write!(f, "proc {name} {body}"),
             Self::Field { head, field } => write!(f, "{head}.{field}"),
         }
     }
@@ -170,8 +172,8 @@ impl Node {
             N::IfExpr { cond, node, else_node } => format!("{} if {} else {}", node.display(indent),
             cond.display(indent), else_node.display(indent)),
             N::While { cond, body } => format!("{s}while {} \n{}", cond.display(indent), body.display(indent + 1)),
-            N::For { param, iter, body } => format!("{s}for {} in {} \n{}", param.display(indent), iter.display(indent), body.display(indent + 1)),
-            N::Proc { name, params, body } => format!("{s}proc {} <- {} \n{}", name.display(indent),
+            N::For { param, iter, body } => format!("{s}for {} in {}\n{}", param.display(indent), iter.display(indent), body.display(indent + 1)),
+            N::Proc { name, params, body } => format!("{s}proc {} <- {}\n{}", name.display(indent),
             params.iter().map(|(id, typ, apply)|
                 match typ {
                     Some(typv) => format!("{} : {}{}", id.display(indent), typv.display(indent), if *apply { "!" } else { "" }),
@@ -185,6 +187,7 @@ impl Node {
                 None => format!("{s}    {}", rule.display(indent))
             })
             .collect::<Vec<String>>().join("\n")),
+            N::Container { name, body } => format!("{s}proc {}\n{}", name.display(indent), body.display(indent + 1)),
             N::Field { head, field } => format!("{}.{}", head.display(indent), field.display(indent)),
         }
     }
@@ -485,6 +488,24 @@ impl Parser {
                 let body = Node(N::Body(nodes), Position::new(body_start_ln..self.ln, body_start_col..self.col));
                 Ok(Node(N::Proc {
                     name: Box::new(name), params, body: Box::new(body)
+                }, Position::new(start_ln..self.ln, start_col..self.col)))
+            }
+            T::Container => {
+                let (start_ln, start_col) = (self.ln, self.col);
+                self.advance();
+                let name = self.atom(context)?;
+                self.expect(T::EOL, context)?;
+                self.advance_ln();
+                let mut nodes: Vec<Node> = vec![];
+                let (body_start_ln, body_start_col) = (self.ln, self.col);
+                while let T::Indent(i) = self.token() {
+                    if *i <= indent { break }
+                    let node = self.stat(0, context)?;
+                    nodes.push(node);
+                }
+                let body = Node(N::Body(nodes), Position::new(body_start_ln..self.ln, body_start_col..self.col));
+                Ok(Node(N::Container {
+                    name: Box::new(name), body: Box::new(body)
                 }, Position::new(start_ln..self.ln, start_col..self.col)))
             }
             T::Rule => {

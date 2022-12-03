@@ -511,6 +511,19 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                         }
                     }
                 }
+                V::Container(container_context) => if let Node(N::ID(field), field_pos) = field_node.as_ref() {
+                    match container_context.get(field) {
+                        Some(value) => Ok((value.clone(), R::None)),
+                        None => {
+                            context.trace(field_pos.clone());
+                            Err(E::FieldNotFound(field.clone()))
+                        }
+                    }
+                } else {
+                    let (field, _) = interpret(field_node, context)?;
+                    context.trace(field_node.1.clone());
+                    Err(E::InvalidField(head.typ(), field.typ()))
+                }
                 _ => {
                     context.trace(head_node.1.clone());
                     Err(E::InvalidHead(head.typ()))
@@ -676,22 +689,36 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                     }
                 }
                 context.def(id, &V::Proc(params.clone(), body_node.as_ref().clone()));
-                return Ok((V::Null, R::None))
+                Ok((V::Null, R::None))
+            } else {
+                context.trace(name_node.1.clone());
+                Err(E::ExpectedNode(N::ID("_".into()), name_node.0.clone()))
             }
-            context.trace(name_node.1.clone());
-            Err(E::ExpectedNode(N::ID("_".into()), name_node.0.clone()))
         }
         Node(N::Rule { name: name_node, id: id_node, rules }, _) => {
             if let Node(N::ID(name), name_pos) = name_node.as_ref() {
                 if let Node(N::ID(id), id_pos) = id_node.as_ref() {
                     context.def(name, &V::Rule(name.clone(), id.clone(), rules.clone()));
-                    return Ok((V::Null, R::None))
+                    Ok((V::Null, R::None))
+                } else {
+                    context.trace(id_node.1.clone());
+                    Err(E::ExpectedNode(N::ID("_".into()), id_node.0.clone()))
                 }
-                context.trace(id_node.1.clone());
-                return Err(E::ExpectedNode(N::ID("_".into()), id_node.0.clone()))
+            } else {
+                context.trace(name_node.1.clone());
+                Err(E::ExpectedNode(N::ID("_".into()), name_node.0.clone()))
             }
-            context.trace(name_node.1.clone());
-            Err(E::ExpectedNode(N::ID("_".into()), name_node.0.clone()))
+        }
+        Node(N::Container { name: name_node, body }, pos) => {
+            if let Node(N::ID(name), name_pos) = name_node.as_ref() {
+                let mut container_context = Context::container(context);
+                interpret(body, &mut container_context)?;
+                context.def(name, &V::Container(container_context));
+                Ok((V::Null, R::None))
+            } else {
+                context.trace(name_node.1.clone());
+                Err(E::ExpectedNode(N::ID("_".into()), name_node.0.clone()))
+            }
         }
         Node(N::Call { id: id_node, args }, pos) => {
             context.trace(pos.clone());

@@ -41,6 +41,12 @@ impl Context {
             trace: context.trace.clone(), path: context.path.clone()
         }
     }
+    pub fn container(context: &Context) -> Self {
+        Self {
+            stack: vec![Scope::new()], global: context.global.clone(),
+            trace: vec![], path: context.path.clone()
+        }
+    }
     pub fn push(&mut self) {
         self.stack.push(Scope::new());
     }
