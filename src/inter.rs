@@ -438,7 +438,6 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                         arg_values.push(value);
                     }
                     let arg = arg_values.get(0).or_else(|| Some(&V::Null)).unwrap();
-                    dbg!(&arg);
                     let value = apply_rule(&proc, arg, pos, context)?;
                     Ok((value, R::None))
                 }
