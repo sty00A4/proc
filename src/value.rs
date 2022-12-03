@@ -141,6 +141,9 @@ impl V {
             Self::Type(_) => Type::Type,
         }
     }
+    pub fn bool(value: &V) -> Self {
+        Type::Bool.cast(value).unwrap_or_else(|| Self::Bool(false))
+    }
 }
 
 #[derive(Clone)]

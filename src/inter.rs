@@ -471,6 +471,13 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                 }
             }
         }
+        Node(N::IfExpr { cond: cond_node, node, else_node }, pos) => {
+            let (cond, _) = interpret(cond_node, context)?;
+            if V::bool(&cond) == V::Bool(true) {
+                return interpret(node, context)
+            }
+            interpret(else_node, context)
+        }
 
         // structure
         Node(N::Return(node), _) => {
@@ -764,6 +771,6 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
             }
             Ok((V::Null, R::None))
         }
-        _ => Err(E::Todo(input_node.to_string()))
+        //_ => Err(E::Todo(input_node.to_string()))
     }
 }
