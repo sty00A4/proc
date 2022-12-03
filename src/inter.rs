@@ -455,13 +455,20 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                 V::Object(obj) => if let Node(N::ID(field), field_pos) = field_node.as_ref() {
                     match obj.get(field) {
                         Some(value) => Ok((value.clone(), R::None)),
-                        None => Err(E::FieldNotFound(field.clone()))
+                        None => {
+                            context.trace(field_pos.clone());
+                            Err(E::FieldNotFound(field.clone()))
+                        }
                     }
                 } else {
                     let (field, _) = interpret(field_node, context)?;
+                    context.trace(field_node.1.clone());
                     Err(E::InvalidField(head.typ(), field.typ()))
                 }
-                _ => Err(E::InvalidHead(head.typ()))
+                _ => {
+                    context.trace(head_node.1.clone());
+                    Err(E::InvalidHead(head.typ()))
+                }
             }
         }
 
