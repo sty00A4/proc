@@ -18,6 +18,7 @@ pub enum N {
     IfExpr { cond: Box<Node>, node: Box<Node>, else_node: Box<Node> },
     Proc { name: Box<Node>, params: ProcParams, body: Box<Node> },
     Rule { name: Box<Node>, id: Box<Node>, rules: Rules },
+    Field { head: Box<Node>, field: Box<Node> },
 }
 impl N {
     pub fn name(&self) -> &str {
@@ -50,6 +51,7 @@ impl N {
             Self::IfExpr { cond:_, node:_, else_node:_ } => "if expression",
             Self::Proc { name:_, params:_, body:_ } => "procedure definition",
             Self::Rule { name:_, id:_, rules:_ } => "rule definition",
+            Self::Field { head:_, field:_ } => "field",
         }
     }
 }
@@ -108,7 +110,8 @@ impl std::fmt::Display for N {
                 Some(new) => format!("{rule} : {new}"),
                 None => format!("{rule}")
             })
-            .collect::<Vec<String>>().join("; "))
+            .collect::<Vec<String>>().join("; ")),
+            Self::Field { head, field } => write!(f, "{head}.{field}"),
         }
     }
 }
@@ -177,7 +180,8 @@ impl Node {
                 Some(new) => format!("{} : {}", rule.display(indent), new.display(indent)),
                 None => format!("{}", rule.display(indent))
             })
-            .collect::<Vec<String>>().join("\n"))
+            .collect::<Vec<String>>().join("\n")),
+            N::Field { head, field } => format!("{}.{}", head.display(indent), field.display(indent)),
         }
     }
 }
@@ -532,7 +536,7 @@ impl Parser {
         Ok(node)
     }
     pub fn call(&mut self, context: &mut Context) -> Result<Node, E> {
-        let node = self.atom(context)?;
+        let node = self.field(context)?;
         if self.token() == &T::EvalIn {
             let (start_ln, start_col) = (self.ln, self.col);
             self.advance_line_break();
@@ -561,6 +565,18 @@ impl Parser {
             }, Position::new((node.1).0.start..(arg.1).0.end, (node.1).1.start..(arg.1).1.end)))
         }
         Ok(node)
+    }
+    pub fn field(&mut self, context: &mut Context) -> Result<Node, E> {
+        let start = self.col;
+        let mut head = self.atom(context)?;
+        while self.token() == &T::Field {
+            self.advance();
+            let field = self.atom(context)?;
+            head = Node(N::Field {
+                head: Box::new(head.clone()), field: Box::new(field.clone()) }
+            , Position::new(self.ln..self.ln+1, start..(field.1).1.end))
+        }
+        Ok(head)
     }
     pub fn atom(&mut self, context: &mut Context) -> Result<Node, E> {
         let node = match self.token() {

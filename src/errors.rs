@@ -14,6 +14,7 @@ pub enum E {
     CannotAssign(N), NotDefined(String),
     Cast(Type, V),
     Rule(V, String), RuleCast(V, String),
+    InvalidField(Type, Type), InvalidHead(Type), FieldNotFound(String),
     Assertion
 }
 impl std::fmt::Display for E {
@@ -37,6 +38,9 @@ impl std::fmt::Display for E {
             Self::Cast(typ, v) => write!(f, "ERROR: cannot cast {v:?} to {typ}"),
             Self::Rule(v, name) => write!(f, "ERROR: rule {name} does not apply on {v:?}"),
             Self::RuleCast(v, name) => write!(f, "ERROR: cannot cast {v:?} to {name}"),
+            Self::InvalidField(head, field) => write!(f, "ERROR: cannot index {head} by {field}"),
+            Self::InvalidHead(head) => write!(f, "ERROR: cannot index {head}"),
+            Self::FieldNotFound(field) => write!(f, "ERROR: field {field} not found"),
             Self::Assertion => write!(f, "ERROR: assertion failed"),
         }
     }

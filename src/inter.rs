@@ -449,11 +449,32 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                 }
             }
         }
+        Node(N::Field { head: head_node, field: field_node }, pos) => {
+            let (head, _) = interpret(head_node, context)?;
+            match &head {
+                V::Object(obj) => if let Node(N::ID(field), field_pos) = field_node.as_ref() {
+                    match obj.get(field) {
+                        Some(value) => Ok((value.clone(), R::None)),
+                        None => Err(E::FieldNotFound(field.clone()))
+                    }
+                } else {
+                    let (field, _) = interpret(field_node, context)?;
+                    Err(E::InvalidField(head.typ(), field.typ()))
+                }
+                _ => Err(E::InvalidHead(head.typ()))
+            }
+        }
 
         // structure
         Node(N::Return(node), _) => {
             let (value, _) = interpret(node, context)?;
             Ok((value, R::Return))
+        }
+        Node(N::Break, _) => {
+            Ok((V::Null, R::Break))
+        }
+        Node(N::Continue, _) => {
+            Ok((V::Null, R::Continue))
         }
         Node(N::Body(nodes), _) => {
             context.push();
