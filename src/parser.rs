@@ -162,7 +162,7 @@ impl Node {
             N::If { cond, body, else_body } => match else_body {
                 Some(else_body) => format!("{s}if {} \n{}\n{s}else\n{}", cond.display(indent),
                 body.display(indent + 1), else_body.display(indent + 1)),
-                None => format!("if {} \n{}\n", cond.display(indent), body.display(indent + 1))
+                None => format!("{s}if {} \n{}\n", cond.display(indent), body.display(indent + 1))
             },
             N::IfExpr { cond, node, else_node } => format!("{} if {} else {}", node.display(indent),
             cond.display(indent), else_node.display(indent)),

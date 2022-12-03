@@ -1,5 +1,8 @@
 #![allow(dead_code)]#![allow(unused)]
 
+use std::thread;
+const STACK_SIZE: usize = 0x800000;
+
 mod position;
 mod errors;
 mod value;
@@ -47,7 +50,7 @@ fn runfile_context(path: &String) -> Result<Option<V>, (E, Trace)> {
     }
 }
 
-fn main() {
+fn _main() {
     let mut args_ = std::env::args().collect::<Vec<String>>();
     let mut args = args_.iter_mut();
     args.next();
@@ -61,6 +64,13 @@ fn main() {
         }
         None => return,
     }
+}
+fn main() {
+    let child = thread::Builder::new()
+        .stack_size(STACK_SIZE)
+        .spawn(_main)
+        .unwrap();
+    child.join().unwrap();
 }
 
 #[cfg(test)]
