@@ -771,6 +771,5 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
             }
             Ok((V::Null, R::None))
         }
-        //_ => Err(E::Todo(input_node.to_string()))
     }
 }
