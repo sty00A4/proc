@@ -362,7 +362,17 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                 }
                 _ => {
                     match op {
-                        // todo: comp
+                        T::EQ | T::NE | T::LT | T::GT | T::LE | T::GE => {
+                            for i in 0..nodes.len()-1 {
+                                let (left, _) = interpret(&nodes[i], context)?;
+                                let (right, _) = interpret(&nodes[i+1], context)?;
+                                let value = binary(op, &left, &right, &nodes[i].1, context)?;
+                                if value == V::Bool(false) {
+                                    return Ok((V::Bool(false), R::None))
+                                }
+                            }
+                            Ok((V::Bool(true), R::None))
+                        }
                         _ => {
                             let (mut value, _) = interpret(&nodes[0], context)?;
                             for i in 1..nodes.len() {

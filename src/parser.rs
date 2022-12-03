@@ -239,6 +239,7 @@ impl Parser {
         }
     }
     pub fn advance(&mut self) { self.col += 1; }
+    pub fn revert(&mut self) { self.col -= 1; }
     pub fn advance_ln(&mut self) { self.ln += 1; self.col = 0; }
     pub fn advance_expect(&mut self, token: T, context: &mut Context) -> Result<(), E> {
         self.expect(token, context)?;
@@ -380,7 +381,7 @@ impl Parser {
                         }
                         else_body = Some(Box::new(Node(N::Body(else_nodes), Position::new(else_start_ln..self.ln, else_start_col..self.col))));
                     }
-                }
+                } else { else_indent = indent; self.revert(); } // revert if not `else`
                 Ok(Node(N::If {
                     cond: Box::new(cond), body: Box::new(body), else_body: else_body
                 }, Position::new(start_ln..self.ln, start_col..self.col)))
