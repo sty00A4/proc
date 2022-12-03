@@ -84,6 +84,21 @@ mod tests {
     use std::collections::HashSet;
     use crate::*;
 
+    fn test_file(path: &'static str) -> Result<(), E> {
+        let mut context = Context::new(&path.to_string());
+        std_context(&mut context);
+        run_file(&path.to_string(), &mut context)?;
+        match context.get(&"test".to_string()) {
+            Some(proc) => if let V::Proc(_, body) = proc {
+                let mut call_context = Context::proc(&context);
+                interpret(body, &mut call_context)?;
+                Ok(())
+            } else {
+                Err(E::Test)
+            }
+            None => Err(E::Test)
+        }
+    }
     #[test]
     fn type_checking() {
         assert!(Type::Any == Type::Any);
@@ -98,19 +113,6 @@ mod tests {
     }
     #[test]
     fn samples_numbers() -> Result<(), E> {
-        let path = String::from("samples/numbers.pr");
-        let mut context = Context::new(&path);
-        std_context(&mut context);
-        run_file(&path, &mut context)?;
-        match context.get(&"test".to_string()) {
-            Some(proc) => if let V::Proc(_, body) = proc {
-                let mut call_context = Context::proc(&context);
-                interpret(body, &mut call_context)?;
-                Ok(())
-            } else {
-                Err(E::Test)
-            }
-            None => Err(E::Test)
-        }
+        test_file("samples/numbers.pr")
     }
 }
