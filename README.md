@@ -1,5 +1,17 @@
 # Proc
-An interpreted programming language, implementing the concepts of rules and containers.
+An interpreted programming language, implementing the concepts of rules and containers. The language is not finished yet, [To-Do](#to-do)
+
+# Content
+- [Guide](#guide)
+    - [Types](#types)
+    - [Rules](#rules)
+    - [Container](#container)
+- [To-Do](#to-do)
+- [Contact](#contact)
+
+---
+
+# Guide
 
 ## Types
 `any` - all types
@@ -43,3 +55,30 @@ container math
         return x if x >= 0 else -x
 ```
 A container called `math` containing the global type `number`, the variable `pi` and the procedure `abs`. These can be accessed by using the field operator like this: `math.pi` for the variable `pi`
+
+# To-Do
+Even though the language is already functional, it is far from being where I want it. So here are some To-Dos. 
+*If anyone wants to help with the language, [contact](#contact) me :)*
+
+### Language relevant
+- [ ] **Containers!**
+- [ ] Field assignment
+- [ ] Position fix!
+- [ ] Type procedures (`str.join`, `vec.sum`, ...)
+### Planned Features
+- [ ] Error handeling
+    - [ ] error value type
+    - [ ] `throw` statement
+    - [ ] `try ... catch ...` statement
+### Other
+- [ ] Rust macros for *value* and *type* generation
+- [ ] Built-in procedure containers
+    - [ ] io
+    - [ ] fs
+    - [ ] http
+    - [ ] lang *(the language itself: **parser**, **lexer**, ...)*
+
+# Contact
+
+Gmail - vintendo.games@gmail.com
+Discord - sty#8189
