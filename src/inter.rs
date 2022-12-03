@@ -148,6 +148,24 @@ pub fn binary(op: &T, left: &V, right: &V, pos: &Position, context: &mut Context
             }
             _ => {}
         }
+        T::Or => if V::bool(left) == V::Bool(true) {
+            return Ok(left.clone())
+        } else {
+            if V::bool(right) == V::Bool(true) {
+                return Ok(right.clone())
+            } else {
+                return Ok(V::Bool(false))
+            }
+        }
+        T::And => if V::bool(left) == V::Bool(true) {
+            if V::bool(right) == V::Bool(true) {
+                return Ok(right.clone())
+            } else {
+                return Ok(V::Bool(false))
+            }
+        } else {
+            return Ok(V::Bool(false))
+        }
         _ => {
             context.trace(pos.to_owned());
             return Err(E::InvalidBinaryOp(op.to_owned()))

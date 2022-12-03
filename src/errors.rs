@@ -15,7 +15,7 @@ pub enum E {
     Cast(Type, V),
     Rule(V, String), RuleCast(V, String),
     InvalidField(Type, Type), InvalidHead(Type), FieldNotFound(String),
-    Assertion
+    Assertion, Test
 }
 impl std::fmt::Display for E {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -42,6 +42,7 @@ impl std::fmt::Display for E {
             Self::InvalidHead(head) => write!(f, "ERROR: cannot index {head}"),
             Self::FieldNotFound(field) => write!(f, "ERROR: field {field} not found"),
             Self::Assertion => write!(f, "ERROR: assertion failed"),
+            Self::Test => write!(f, "ERROR: test proc not found"),
         }
     }
 }

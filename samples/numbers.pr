@@ -1,13 +1,13 @@
 rule number <- x
-    x is int|float
+    x is int or x is float : float(x)
 rule natural <- x
-    x is number
-    x >= 0
+    x is number : number(x)
+    x >= 0      : 0
 rule even <- x
-    x is number
+    x is number : number(x)
     x % 2 == 0
 rule odd <- x
-    x is number
+    x is number : number(x)
     x % 2 != 0
 
 proc test

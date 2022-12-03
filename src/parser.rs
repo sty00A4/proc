@@ -177,8 +177,8 @@ impl Node {
             N::Rule { name, id, rules } => format!("{s}rule {} <- {}\n{}",
             name.display(indent), id.display(indent),
             rules.iter().map(|(rule, new)| match new {
-                Some(new) => format!("{} : {}", rule.display(indent), new.display(indent)),
-                None => format!("{}", rule.display(indent))
+                Some(new) => format!("{s}    {} : {}", rule.display(indent), new.display(indent)),
+                None => format!("{s}    {}", rule.display(indent))
             })
             .collect::<Vec<String>>().join("\n")),
             N::Field { head, field } => format!("{}.{}", head.display(indent), field.display(indent)),

@@ -43,10 +43,16 @@ fn run_context(path: &String, text: &String) -> Result<Option<V>, (E, Trace)> {
         Err(e) => Err((e, context.trace))
     }
 }
-fn runfile_context(path: &String) -> Result<Option<V>, (E, Trace)> {
+fn run_file_context(path: &String) -> Result<Option<V>, (E, Trace)> {
     match std::fs::read_to_string(path.as_str()) {
         Ok(text) => run_context(path, &text),
         Err(e) => Err((E::TargetFile(path.clone()), vec![])),
+    }
+}
+fn run_file(path: &String, context: &mut Context) -> Result<Option<V>, E> {
+    match std::fs::read_to_string(path.as_str()) {
+        Ok(text) => run(path, &text, context),
+        Err(e) => Err(E::TargetFile(path.clone())),
     }
 }
 
@@ -55,7 +61,7 @@ fn _main() {
     let mut args = args_.iter_mut();
     args.next();
     match args.next() {
-        Some(path) => match runfile_context(path) {
+        Some(path) => match run_file_context(path) {
             Ok(v) => match v {
                 Some(v) => println!("{v}"),
                 None => {}
@@ -91,8 +97,20 @@ mod tests {
         assert!(Type::Scission(vec![Type::Int, Type::Float]) != Type::Int);
     }
     #[test]
-    fn samples_numbers() -> Result<(), (E, Trace)> {
-        runfile_context(&String::from("samples/numbers.pr"))?;
-        Ok(())
+    fn samples_numbers() -> Result<(), E> {
+        let path = String::from("samples/numbers.pr");
+        let mut context = Context::new(&path);
+        std_context(&mut context);
+        run_file(&path, &mut context)?;
+        match context.get(&"test".to_string()) {
+            Some(proc) => if let V::Proc(_, body) = proc {
+                let mut call_context = Context::proc(&context);
+                interpret(body, &mut call_context)?;
+                Ok(())
+            } else {
+                Err(E::Test)
+            }
+            None => Err(E::Test)
+        }
     }
 }
