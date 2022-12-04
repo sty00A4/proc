@@ -1,0 +1,16 @@
+proc test
+    var person = { name = "sty" age = 18 }
+    person.name = "sty00a4"
+    assert! person.name == "sty00a4"
+    person.name *= 2
+    assert! person.name == "sty00a4sty00a4"
+    person.age = 17
+    assert! person.age == 17
+    person.age++
+    assert! person.age == 18
+    person.age += 1
+    assert! person.age == 19
+    person.age--
+    assert! person.age == 18
+    person.age *= 2
+    assert! person.age == 36

@@ -116,4 +116,12 @@ mod tests {
     fn samples_numbers() -> Result<(), E> {
         test_file("samples/numbers.pr")
     }
+    #[test]
+    fn samples_field() -> Result<(), E> {
+        test_file("samples/field.pr")
+    }
+    #[test]
+    fn samples_ops() -> Result<(), E> {
+        test_file("samples/ops.pr")
+    }
 }
