@@ -133,7 +133,7 @@ impl V {
     pub fn typ(&self) -> Type {
         match self {
             Self::Wildcard => Type::Any,
-            Self::Null => Type::Undefiend,
+            Self::Null => Type::Undefined,
             Self::Int(_) => Type::Int,
             Self::Float(_) => Type::Float,
             Self::Bool(_) => Type::Bool,
@@ -155,7 +155,7 @@ impl V {
 
 #[derive(Clone)]
 pub enum Type {
-    Any, Undefiend,
+    Any, Undefined,
     Int, Float, Bool, String,
     Tuple(Vec<Type>), Vector(Box<Type>), Object, Container,
     Proc, ForeignProc, Rule(String),
@@ -207,7 +207,7 @@ impl Type {
     pub fn cast(&self, value: &V) -> Option<V> {
         match self {
             Type::Any => Some(value.clone()),
-            Type::Undefiend => Some(V::Null),
+            Type::Undefined => Some(V::Null),
             Type::Int => match value {
                 V::Int(_) => Some(value.clone()),
                 V::Float(v) => Some(V::Int(*v as i64)),
@@ -270,7 +270,7 @@ impl std::fmt::Debug for Type {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Any => write!(f, "any"),
-            Self::Undefiend => write!(f, "undefined"),
+            Self::Undefined => write!(f, "undefined"),
             Self::Int => write!(f, "int"),
             Self::Float => write!(f, "float"),
             Self::Bool => write!(f, "bool"),
@@ -292,8 +292,8 @@ impl PartialEq for Type {
     fn eq(&self, other: &Self) -> bool {
         match self {
             Self::Any => true,
-            Self::Undefiend => match other {
-                Self::Undefiend => true,
+            Self::Undefined => match other {
+                Self::Undefined => true,
                 Self::Any => true,
                 Self::Union(_) => other == self,
                 Self::Scission(_) => other == self,

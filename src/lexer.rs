@@ -14,8 +14,8 @@ pub enum T {
     Rule, Container, Proc, If, Else, While, For,
     Var, Global,
     Return, Break, Continue,
-//  !     =       :    <-  ->   #    ?     |       .      ..     ,
-    Call, Assign, Rep, In, Out, Len, Safe, Option, Field, Range, Sep,
+//  !     =       :    <-  ->   #    ?         |       .      ..     ,
+    Call, Assign, Rep, In, Out, Len, Nullable, Option, Field, Range, Sep,
 //  (       )        [         ]          {         }
     EvalIn, EvalOut, VectorIn, VectorOut, ObjectIn, ObjectOut,
 //  +    -    *    /    %    ==  !=  <   >   <=  >=
@@ -60,7 +60,7 @@ impl T {
             Self::In => "'<-'",
             Self::Out => "'->'",
             Self::Len => "'#'",
-            Self::Safe => "'?'",
+            Self::Nullable => "'?'",
             Self::Option => "'|'",
             Self::Field => "'.'",
             Self::Range => "'..'",
@@ -205,7 +205,7 @@ pub fn lex(path: &String, text: &String, context: &mut Context) -> Result<Vec<Ve
                 "?" => {
                     let start = col;
                     col += 1;
-                    tokens[ln].push(Token(T::Safe, Position::new(ln..ln+1, start..col)));
+                    tokens[ln].push(Token(T::Nullable, Position::new(ln..ln+1, start..col)));
                 }
                 "|" => {
                     let start = col;
@@ -361,7 +361,7 @@ pub fn lex(path: &String, text: &String, context: &mut Context) -> Result<Vec<Ve
                             "xor" => T::Xor,
                             "not" => T::Not,
                             "any" => T::Type(Type::Any),
-                            "undefined" => T::Type(Type::Undefiend),
+                            "undefined" => T::Type(Type::Undefined),
                             "int" => T::Type(Type::Int),
                             "float" => T::Type(Type::Float),
                             "bool" => T::Type(Type::Bool),

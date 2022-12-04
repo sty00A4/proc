@@ -103,7 +103,7 @@ mod tests {
     #[test]
     fn type_checking() {
         assert!(Type::Any == Type::Any);
-        assert!(Type::Undefiend == Type::Undefiend);
+        assert!(Type::Undefined == Type::Undefined);
         assert!(Type::Union(vec![Type::Int, Type::Float]) == Type::Union(vec![Type::Int, Type::Float]));
         assert!(Type::Union(vec![Type::Int, Type::Float]) != Type::Union(vec![Type::Int, Type::Bool]));
         assert!(Type::Union(vec![Type::Int, Type::Float, Type::Bool]) != Type::Scission(vec![Type::Int, Type::Float]));

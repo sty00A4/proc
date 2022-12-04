@@ -194,6 +194,10 @@ pub fn unary(op: &T, value: &V, pos: &Position, context: &mut Context) -> Result
             V::Bool(v) => return Ok(V::Bool(!v)),
             _ => {}
         }
+        T::Nullable => match value {
+            V::Type(typ) => return Ok(V::Type(Type::create_union(vec![typ.clone(), Type::Undefined]))),
+            _ => {}
+        }
         _ => {
             context.trace(pos.clone());
             return Err(E::InvalidUnaryOp(op.clone()))
