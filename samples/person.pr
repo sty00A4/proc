@@ -1,0 +1,16 @@
+rule count <- x
+    x is int
+    x >= 0
+proc Person <- name: str, age: count, job: str?
+    return { name = name, age = age, job = job }
+proc greet <- person: obj
+    print! "Hi! My name is " + person.name + " and I'm " + str(person.age) + " years old"
+proc employed <- person: obj
+    return person.job is str
+proc say_job <- person: obj
+    print! "I work as a " + person.job if employed(person) else "I'm currently unemployed"
+
+
+var sty = Person("Vincent", 18)
+greet! sty
+say_job! sty

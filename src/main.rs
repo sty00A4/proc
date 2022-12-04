@@ -100,6 +100,12 @@ mod tests {
             None => Err(E::Test)
         }
     }
+    fn do_file(path: &'static str) -> Result<(), E> {
+        match run_file_context(&path.to_string()) {
+            Ok(_) => Ok(()),
+            Err((e, trace)) => Err(e)
+        }
+    }
     #[test]
     fn type_checking() {
         assert!(Type::Any == Type::Any);
@@ -123,5 +129,10 @@ mod tests {
     #[test]
     fn samples_ops() -> Result<(), E> {
         test_file("samples/ops.pr")
+    }
+    
+    #[test]
+    fn samples_person() -> Result<(), E> {
+        do_file("samples/person.pr")
     }
 }
