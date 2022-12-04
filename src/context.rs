@@ -13,6 +13,9 @@ impl Scope {
     pub fn get(&self, id: &String) -> Option<&V> {
         self.vars.get(id)
     }
+    pub fn get_mut(&mut self, id: &String) -> Option<&mut V> {
+        self.vars.get_mut(id)
+    }
     pub fn set(&mut self, id: &String, v: &V) -> Option<V> {
         self.vars.insert(id.to_owned(), v.to_owned())
     }
@@ -59,6 +62,12 @@ impl Context {
         }
         self.global.get(id)
     }
+    pub fn get_mut(&mut self, id: &String) -> Option<&mut V> {
+        for scope in self.stack.iter_mut().rev() {
+            if let Some(v) = scope.get_mut(id) { return Some(v) }
+        }
+        self.global.get_mut(id)
+    }
     pub fn set(&mut self, id: &String, v: &V) -> Option<V> {
         if let Some(_) = self.global.get(id) {
             return self.global.set(id, v)
@@ -75,6 +84,9 @@ impl Context {
     }
     pub fn trace(&mut self, pos: Position) {
         self.trace.push((pos, self.path.clone()));
+    }
+    pub fn pop_trace(&mut self) -> Option<(Position, String)> {
+        self.trace.pop()
     }
 }
 
