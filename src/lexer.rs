@@ -370,6 +370,9 @@ pub fn lex(path: &String, text: &String, context: &mut Context) -> Result<Vec<Ve
                             "vec" => T::Type(Type::Vector(Box::new(Type::Any))),
                             "obj" => T::Type(Type::Object),
                             "type" => T::Type(Type::Type),
+                            "union" => T::Type(Type::Union(vec![Type::Any])),
+                            "scission" => T::Type(Type::Scission(vec![Type::Any])),
+                            "type" => T::Type(Type::Type),
                             _ => T::ID(id)
                         })(), Position::new(ln..ln+1, start..col)));
                         continue

@@ -166,6 +166,10 @@ pub fn binary(op: &T, left: &V, right: &V, pos: &Position, context: &mut Context
         } else {
             return Ok(V::Bool(false))
         }
+        T::Option => match (left, right) {
+            (V::Type(typ1), V::Type(typ2)) => return Ok(V::Type(Type::create_union(vec![typ1.clone(), typ2.clone()]))),
+            _ => {}
+        }
         _ => {
             context.trace(pos.to_owned());
             return Err(E::InvalidBinaryOp(op.to_owned()))
@@ -525,6 +529,19 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                             }
                             Ok((V::Bool(true), R::None))
                         }
+                        T::Option => {
+                            let mut types: Vec<Type> = vec![];
+                            for node in nodes.iter() {
+                                let (type_value, _) = interpret(node, context)?;
+                                if let V::Type(typ) = type_value {
+                                    types.push(typ);
+                                } else {
+                                    context.trace(node.1.clone());
+                                    return Err(E::ExpectedType(Type::Type, type_value.typ()))
+                                }
+                            }
+                            Ok((V::Type(Type::create_union(types)), R::None))
+                        }
                         _ => {
                             let (mut value, _) = interpret(&nodes[0], context)?;
                             for i in 1..nodes.len() {
@@ -558,11 +575,37 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                 }
                 V::Type(typ) => {
                     let arg = arg_values.get(0).unwrap_or_else(|| &V::Null);
-                    match typ.cast(arg) {
-                        Some(v) => value = v,
-                        None => {
-                            context.trace(pos.clone());
-                            return Err(E::Cast(typ.clone(), arg.clone()))
+                    match typ {
+                        Type::Union(_) => {
+                            let mut types: Vec<Type> = vec![];
+                            for (i, arg) in arg_values.into_iter().enumerate() {
+                                if let V::Type(typ) = arg {
+                                    types.push(typ)
+                                } else {
+                                    context.trace(pos.clone());
+                                    return Err(E::ExpectedType(Type::Type, arg.typ()))
+                                }
+                            }
+                            value = V::Type(Type::create_union(types))
+                        }
+                        Type::Scission(_) => {
+                            let mut types: Vec<Type> = vec![];
+                            for (i, arg) in arg_values.into_iter().enumerate() {
+                                if let V::Type(typ) = arg {
+                                    types.push(typ)
+                                } else {
+                                    context.trace(pos.clone());
+                                    return Err(E::ExpectedType(Type::Type, arg.typ()))
+                                }
+                            }
+                            value = V::Type(Type::create_scission(types))
+                        }
+                        _ => match typ.cast(arg) {
+                            Some(v) => value = v,
+                            None => {
+                                context.trace(pos.clone());
+                                return Err(E::Cast(typ.clone(), arg.clone()))
+                            }
                         }
                     }
                 }
@@ -625,9 +668,9 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                         return Err(E::AlreadyDefined(id.clone()))
                     }
                     if *global {
-                        context.set(id, &value);
-                    } else {
                         context.def(id, &value);
+                    } else {
+                        context.set(id, &value);
                     }
                     Ok((V::Null, R::None))
                 }

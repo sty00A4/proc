@@ -467,7 +467,7 @@ impl Parser {
                         let id = self.atom(context)?;
                         if self.token() == &T::Rep {
                             self.advance();
-                            typ = Some(self.operation(self.ops(0), 0, context)?);
+                            typ = Some(self.expr(context)?);
                             if self.token() == &T::Call {
                                 apply = true;
                                 self.advance();

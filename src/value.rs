@@ -165,8 +165,44 @@ pub enum Type {
 impl Type {
     pub fn create_union(types: Vec<Self>) -> Self {
         let mut collected: Vec<Self> = vec![];
-        for t in types { if !collected.contains(&t) { collected.push(t); } }
+        for t in types {
+            if !collected.contains(&t) {
+                if let Self::Union(sub_types) = t {
+                    let typ = Self::create_union(sub_types);
+                    if let Self::Union(sub_types) = typ {
+                        for typ in sub_types {
+                            collected.push(typ);
+                        }
+                    } else {
+                        collected.push(typ);
+                    }
+                } else {
+                    collected.push(t);
+                }
+            }
+        }
+        if collected.len() == 1 { return collected[0].clone() }
         Self::Union(collected)
+    }
+    pub fn create_scission(types: Vec<Self>) -> Self {
+        let mut collected: Vec<Self> = vec![];
+        for t in types {
+            if !collected.contains(&t) {
+                if let Self::Union(sub_types) = t {
+                    let typ = Self::create_scission(sub_types);
+                    if let Self::Scission(sub_types) = typ {
+                        for typ in sub_types {
+                            collected.push(typ);
+                        }
+                    } else {
+                        collected.push(typ);
+                    }
+                } else {
+                    collected.push(t);
+                }
+            }
+        }
+        Self::Scission(collected)
     }
     pub fn cast(&self, value: &V) -> Option<V> {
         match self {

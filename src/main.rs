@@ -73,6 +73,7 @@ fn _main() {
 }
 fn main() {
     let child = thread::Builder::new()
+        .name("main".to_string())
         .stack_size(STACK_SIZE)
         .spawn(_main)
         .unwrap();
