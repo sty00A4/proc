@@ -1,7 +1,6 @@
 #![allow(dead_code)]#![allow(unused)]
 
 use std::thread;
-const STACK_SIZE: usize = 0x800000;
 
 mod position;
 mod errors;
@@ -72,12 +71,17 @@ fn _main() {
     }
 }
 fn main() {
-    let child = thread::Builder::new()
-        .name("main".to_string())
-        .stack_size(STACK_SIZE)
+    match thread::Builder::new()
+        .name("_main".to_string())
+        .stack_size(0x800000)
         .spawn(_main)
-        .unwrap();
-    child.join().unwrap();
+    {
+        Ok(child) => match child.join() {
+            Ok(_) => {},
+            Err(e) => eprintln!("{e:?}")
+        }
+        Err(e) => eprintln!("{e}")
+    }
 }
 
 #[cfg(test)]
