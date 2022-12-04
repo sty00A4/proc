@@ -351,6 +351,7 @@ impl Parser {
                 let id = self.operation(self.layers.last().unwrap().clone(), self.layers.len()-1, context)?;
                 self.advance_expect(T::Assign, context)?;
                 let expr = self.expr(context)?;
+                self.expect(T::EOL, context)?;
                 self.advance_ln();
                 Ok(Node(N::Assign {
                     global: prefix == T::Global, id: Box::new(id), expr: Box::new(expr)
@@ -540,16 +541,21 @@ impl Parser {
                     let op = self.token().to_owned();
                     self.advance();
                     let expr = self.expr(context)?;
+                    self.expect(T::EOL, context)?;
                     self.advance_ln();
                     return Ok(Node(N::OpAssign {
                         op, id: Box::new(node), expr: Box::new(expr)
                     }, Position::new(self.ln..self.ln+1, start..self.col)))
                 }
                 if self.token() == &T::Inc {
+                    self.advance();
+                    self.expect(T::EOL, context)?;
                     self.advance_ln();
                     return Ok(Node(N::Inc(Box::new(node)), Position::new(self.ln..self.ln+1, start..self.col)))
                 }
                 if self.token() == &T::Dec {
+                    self.advance();
+                    self.expect(T::EOL, context)?;
                     self.advance_ln();
                     return Ok(Node(N::Dec(Box::new(node)), Position::new(self.ln..self.ln+1, start..self.col)))
                 }
