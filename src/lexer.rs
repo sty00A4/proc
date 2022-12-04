@@ -340,8 +340,7 @@ pub fn lex(path: &String, text: &String, context: &mut Context) -> Result<Vec<Ve
                         tokens[ln].push(Token((|| match id.as_str() {
                             "_" => T::Wildcard,
                             "null" => T::Null,
-                            "true" => T::Bool(true),
-                            "false" => T::Bool(false),
+                            "true" | "false" => T::Bool(id == "true"),
                             "rule" => T::Rule,
                             "container" => T::Container,
                             "proc" => T::Proc,
