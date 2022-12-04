@@ -80,4 +80,5 @@ Even though the language is already functional, it is far from being where I wan
 # Contact
 
 Gmail - vintendo.games@gmail.com
+
 Discord - sty#8189
