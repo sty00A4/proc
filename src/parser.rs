@@ -249,7 +249,7 @@ impl Parser {
         }
     }
     pub fn advance(&mut self) { self.col += 1; }
-    pub fn revert(&mut self) { self.col -= 1; }
+    pub fn revert(&mut self) { self.col -= if self.col > 1 { 1 } else { 0 }; }
     pub fn advance_ln(&mut self) { self.ln += 1; self.col = 0; }
     pub fn advance_expect(&mut self, token: T, context: &mut Context) -> Result<(), E> {
         self.expect(token, context)?;
