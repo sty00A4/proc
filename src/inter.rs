@@ -912,6 +912,15 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                         }
                         Ok((V::Null, R::None))
                     }
+                    V::String(string) => {
+                        for v in string.chars() {
+                            context.set(param, &V::String(v.to_string()));
+                            let (value, ret) = interpret(body, context)?;
+                            if ret == R::Return { return Ok((value, ret)) }
+                            if ret == R::Break { break }
+                        }
+                        Ok((V::Null, R::None))
+                    }
                     V::Tuple(values) => {
                         for v in values.iter() {
                             context.set(param, v);
