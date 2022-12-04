@@ -619,6 +619,10 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
             let (value, _) = interpret(expr, context)?;
             match id_node.as_ref() {
                 Node(N::ID(id), id_pos) => {
+                    if context.get(id).is_some() {
+                        context.trace(id_pos.clone());
+                        return Err(E::AlreadyDefined(id.clone()))
+                    }
                     if *global {
                         context.set(id, &value);
                     } else {
