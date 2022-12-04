@@ -577,6 +577,7 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                     ]), proc.typ()))
                 }
             }
+            context.pop_trace();
             Ok((value, R::None))
         }
         Node(N::Field { head: head_node, field: field_node }, pos) => {
@@ -818,8 +819,7 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                 let (value, _) = interpret(arg, context)?;
                 arg_values.push(value);
             }
-            let mut old_context = Context::from(context);
-            *context = Context::proc(context);
+            let mut call_context = Context::proc(context);
             match proc {
                 V::Proc(ref params, ref body) => {
                     assign_params(params, arg_values, pos, context)?;
@@ -834,7 +834,7 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                     return Err(E::ExpectedType(Type::Union(vec![Type::Proc, Type::ForeignProc]), proc.typ()))
                 }
             }
-            *context = old_context;
+            context.pop_trace();
             Ok((V::Null, R::None))
         }
         Node(N::If { cond: cond_node, body, else_body }, _) => {

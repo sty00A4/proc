@@ -10,6 +10,7 @@ pub struct Scope {
 impl Scope {
     pub fn new() -> Self { Self { vars: HashMap::new() } }
     pub fn from(scope: &Self) -> Self { Self { vars: scope.vars.clone() } }
+    
     pub fn get(&self, id: &String) -> Option<&V> {
         self.vars.get(id)
     }
@@ -50,12 +51,14 @@ impl Context {
             trace: vec![], path: context.path.clone()
         }
     }
+    
     pub fn push(&mut self) {
         self.stack.push(Scope::new());
     }
     pub fn pop(&mut self) -> Option<Scope> {
         self.stack.pop()
     }
+    
     pub fn get(&self, id: &String) -> Option<&V> {
         for scope in self.stack.iter().rev() {
             if let Some(v) = scope.get(id) { return Some(v) }
@@ -82,6 +85,7 @@ impl Context {
     pub fn def(&mut self, id: &String, v: &V) -> Option<V> {
         self.global.set(id, v)
     }
+    
     pub fn trace(&mut self, pos: Position) {
         self.trace.push((pos, self.path.clone()));
     }
