@@ -7,7 +7,7 @@ pub type ProcParams = Vec<(Node, Option<Node>, bool)>;
 pub enum N {
     Body(Vec<Node>),
     Wildcard, Null, Int(i64), Float(f64), Bool(bool), String(String),
-    Vector(Vec<Node>), Object(Vec<(Node, Node)>), ID(String), Type(Type),
+    Vector(Vec<Node>), Tuple(Vec<Node>), Object(Vec<(Node, Node)>), ID(String), Type(Type),
     Binary { op: T, left: Box<Node>, right: Box<Node> },
     Unary { op: T, node: Box<Node> }, Multi { op: T, nodes: Vec<Node> },
     Assign { global: bool, id: Box<Node>, expr: Box<Node> }, OpAssign { op: T, id: Box<Node>, expr: Box<Node> },
@@ -32,6 +32,7 @@ impl N {
             Self::Bool(_) => "bool",
             Self::String(_) => "str",
             Self::Vector(_) => "vec",
+            Self::Tuple(_) => "tuple",
             Self::Object(_) => "obj",
             Self::ID(_) => "identifier",
             Self::Type(_) => "type",
@@ -70,6 +71,8 @@ impl std::fmt::Display for N {
             Self::Bool(v) => write!(f, "{v:?}"),
             Self::String(v) => write!(f, "{v:?}"),
             Self::Vector(v) => write!(f, "[{}]", v.iter().map(|x| x.to_string())
+            .collect::<Vec<String>>().join(", ")),
+            Self::Tuple(v) => write!(f, "({})", v.iter().map(|x| x.to_string())
             .collect::<Vec<String>>().join(", ")),
             Self::Object(v) => write!(f, "{{ {} }}", v.iter().map(|(k, v)| format!("{k} = {v}"))
             .collect::<Vec<String>>().join(", ")),
@@ -140,6 +143,7 @@ impl Node {
             N::Bool(v) => format!("{v:?}"),
             N::String(v) => format!("{v:?}"),
             N::Vector(v) => format!("[{}]", v.iter().map(|x| x.display(indent)).collect::<Vec<String>>().join(", ")),
+            N::Tuple(v) => format!("({})", v.iter().map(|x| x.display(indent)).collect::<Vec<String>>().join(", ")),
             N::Object(v) => format!("{{ {} }}",
             v.iter().map(|(k, v)| format!("{} = {}", k.display(indent), v.display(indent)))
             .collect::<Vec<String>>().join(", ")),
@@ -252,7 +256,7 @@ impl Parser {
         self.advance();
         Ok(())
     }
-    pub fn advance_if(&mut self, token: T, context: &mut Context) {
+    pub fn advance_if(&mut self, token: T) {
         if self.token() == &token { self.advance(); }
     }
     pub fn advance_line_break(&mut self) {
@@ -474,7 +478,7 @@ impl Parser {
                                 self.advance();
                             }
                         }
-                        self.advance_if(T::Sep, context);
+                        self.advance_if(T::Sep);
                         params.push((id, typ, apply));
                     }
                 }
@@ -564,7 +568,7 @@ impl Parser {
                 let mut args: Vec<Node> = vec![];
                 while self.token() != &T::EOL {
                     let value = self.expr(context)?;
-                    self.advance_if(T::Sep, context);
+                    self.advance_if(T::Sep);
                     args.push(value);
                 }
                 self.advance_ln();
@@ -596,7 +600,7 @@ impl Parser {
             let mut args: Vec<Node> = vec![];
             while self.token() != &T::EvalOut {
                 let arg = self.expr(context)?;
-                self.advance_if(T::Sep, context);
+                self.advance_if(T::Sep);
                 self.advance_if_line_break();
                 args.push(arg);
             }
@@ -642,9 +646,20 @@ impl Parser {
             T::Type(v) => Ok(Node(N::Type(v.to_owned()), self.pos().to_owned())),
             T::ID(id) => Ok(Node(N::ID(id.to_owned()), self.pos().to_owned())),
             T::EvalIn => {
+                let start = self.col;
                 self.advance();
                 let node = self.expr(context)?;
-                Ok(node)
+                if self.token() != &T::EvalOut {
+                    let mut nodes = vec![node];
+                    while self.token() != &T::EvalOut {
+                        self.advance_if(T::Sep);
+                        let node = self.expr(context)?;
+                        nodes.push(node);
+                    }
+                    Ok(Node(N::Tuple(nodes), Position::new(self.ln..self.ln+1, start..self.col)))
+                } else {
+                    Ok(node)
+                }
             }
             T::VectorIn => {
                 let (start_ln, start_col) = (self.ln, self.col);
@@ -652,7 +667,7 @@ impl Parser {
                 let mut nodes: Vec<Node> = vec![];
                 while self.token() != &T::VectorOut {
                     let node = self.expr(context)?;
-                    self.advance_if(T::Sep, context);
+                    self.advance_if(T::Sep);
                     self.advance_if_line_break();
                     nodes.push(node);
                 }
@@ -667,7 +682,7 @@ impl Parser {
                     let key = self.atom(context)?;
                     self.advance_expect(T::Assign, context)?;
                     let expr = self.expr(context)?;
-                    self.advance_if(T::Sep, context);
+                    self.advance_if(T::Sep);
                     self.advance_if_line_break();
                     nodes.push((key, expr));
                 }

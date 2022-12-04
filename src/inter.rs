@@ -479,6 +479,16 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
             }
             Ok((V::Vector(values, Type::create_union(types)), R::None))
         }
+        Node(N::Tuple(nodes), _) => {
+            let mut values: Vec<V> = vec![];
+            let mut types: Vec<Type> = vec![];
+            for n in nodes.iter() {
+                let (v, _) = interpret(n, context)?;
+                types.push(v.typ());
+                values.push(v);
+            }
+            Ok((V::Tuple(values), R::None))
+        }
         Node(N::Object(nodes), _) => {
             let mut values: HashMap<String, V> = HashMap::new();
             for (key_node, node) in nodes.iter() {
