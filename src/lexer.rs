@@ -410,7 +410,7 @@ pub fn lex(path: &String, text: &String, context: &mut Context) -> Result<Vec<Ve
         match tokens.get_mut(ln) {
             Some(tokens_) => tokens_.push(Token(T::EOL, Position::new(ln..ln+1, col..col))),
             None => {},
-        };
+        }
     }
     tokens.push(vec![Token(T::EOF, Position::new(tokens.len()-1..tokens.len(), 0..0))]); // end of file
     Ok(tokens)
