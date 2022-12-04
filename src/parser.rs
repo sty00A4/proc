@@ -333,8 +333,10 @@ impl Parser {
     pub fn parse(&mut self, context: &mut Context) -> Result<Node, E> {
         let mut nodes: Vec<Node> = vec![];
         while self.token() != &T::EOF {
+            let mut indent: u16 = 0;
+            if let T::Indent(i) = self.token() { indent += *i; self.advance(); }
             if self.token() == &T::EOL { self.advance_ln(); continue }
-            let node = self.stat(0, context)?;
+            let node = self.stat(indent, context)?;
             nodes.push(node);
         }
         Ok(Node(N::Body(nodes), Position::new(0..self.ln, 0..self.col)))
