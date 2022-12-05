@@ -1,8 +1,9 @@
-use std::fs::read_to_string;
+use std::{fs::read_to_string, error::Error};
 use crate::*;
 
 #[derive(Clone, Debug)]
 pub enum E {
+    Error(String),
     Todo(String),
     TargetFile(String), FileNotFound(String),
     IllegalChar(String),
@@ -22,6 +23,7 @@ pub enum E {
 impl std::fmt::Display for E {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Self::Error(e) => write!(f, "ERROR: {e}"),
             Self::TargetFile(v) => write!(f, "ERROR: target file '{v}' not found"),
             Self::FileNotFound(v) => write!(f, "ERROR: file '{v}' not found"),
             Self::Todo(v) => write!(f, "ERROR: todo - {v}"),

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, io::Write};
 use crate::*;
 
 pub type Trace = Vec<(Position, String)>;
@@ -99,6 +99,21 @@ pub fn _print(context: &mut Context, pos: &Position) -> Result<V, E> {
     if let Some(x) = x { println!("{x}"); }
     Ok(V::Null)
 }
+pub fn _input(context: &mut Context, pos: &Position) -> Result<V, E> {
+    let x = context.get(&String::from("x"));
+    if let Some(x) = x {
+        print!("{x}");
+        std::io::stdout().flush();
+    }
+    let mut input = String::new();
+    match std::io::stdin().read_line(&mut input) {
+        Ok(_) => {
+            while input.ends_with("\n") || input.ends_with("\r") { input.remove(input.len() - 1); }
+            Ok(V::String(input))
+        }
+        Err(e) => Err(E::Error(e.to_string()))
+    }
+}
 pub fn _assert(context: &mut Context, pos: &Position) -> Result<V, E> {
     let x = context.get(&String::from("x"));
     if let Some(x) = x {
@@ -113,9 +128,15 @@ pub fn _assert(context: &mut Context, pos: &Position) -> Result<V, E> {
     Ok(V::Null)
 }
 pub fn std_context(context: &mut Context) {
+    fn type_node(typ: Type) -> Node {
+        Node(N::Type(typ), Position::new(0..0, 0..0))
+    }
     context.def(&String::from("print"), &V::ForeignProc(vec![
         ("x".into(), None, false)
     ], _print));
+    context.def(&String::from("input"), &V::ForeignProc(vec![
+        ("x".into(), Some(type_node(Type::String)), false)
+    ], _input));
     context.def(&String::from("assert"), &V::ForeignProc(vec![
         ("x".into(), None, false)
     ], _assert));
