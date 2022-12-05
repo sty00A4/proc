@@ -258,7 +258,7 @@ pub fn apply_rule(rule_value: &V, value: &V, pos: &Position, context: &mut Conte
     Err(E::ExpectedType(Type::Rule("<ANY>".into()), rule_value.typ()))
 }
 
-pub fn assign_params(params: &ProcValueParams, arg_values: Vec<V>, pos: &Position, context: &mut Context) -> Result<(), E> {
+pub fn assign_params(params: &ProcValueParams, arg_values: Vec<V>, poses: Vec<&Position>, context: &mut Context) -> Result<(), E> {
     for i in 0..params.len() {
         let (param, type_node_, apply) = &params[i];
         let mut value = match arg_values.get(i) {
@@ -273,12 +273,12 @@ pub fn assign_params(params: &ProcValueParams, arg_values: Vec<V>, pos: &Positio
                         match typ.cast(&value) {
                             Some(new_value) => value = new_value,
                             None => {
-                                context.trace(pos.clone());
+                                context.trace(poses[i].clone());
                                 return Err(E::ExpectedTypeArg(format!("{i}"), typ.clone(), value.typ()))
                             }
                         }
                     } else {
-                        context.trace(pos.clone());
+                        context.trace(poses[i].clone());
                         return Err(E::ExpectedTypeArg(format!("{i}"), typ.clone(), value.typ()))
                     }
                 }
@@ -569,10 +569,11 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
             }
         }
         Node(N::CallExpr { id: id_node, args }, pos) => {
-            context.trace(pos.clone());
             let (proc, _) = interpret(id_node, context)?;
             let mut arg_values: Vec<V> = vec![];
+            let mut arg_poses: Vec<&Position> = vec![];
             for arg in args.iter() {
+                arg_poses.push(&arg.1);
                 let (value, _) = interpret(arg, context)?;
                 arg_values.push(value);
             }
@@ -580,11 +581,13 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
             let mut value = V::Null;
             match proc {
                 V::Proc(ref params, ref body) => {
-                    assign_params(params, arg_values, pos, &mut call_context)?;
+                    assign_params(params, arg_values, arg_poses, &mut call_context)?;
+                    context.trace(pos.clone());
                     (value, _) = interpret(body, &mut call_context)?;
                 }
                 V::ForeignProc(ref params, ref func) => {
-                    assign_params(params, arg_values, pos, &mut call_context)?;
+                    assign_params(params, arg_values, arg_poses, &mut call_context)?;
+                    context.trace(pos.clone());
                     value = func(&mut call_context, pos)?;
                 }
                 V::Type(typ) => {
@@ -869,21 +872,24 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
             }
         }
         Node(N::Call { id: id_node, args }, pos) => {
-            context.trace(pos.clone());
             let (proc, _) = interpret(id_node, context)?;
             let mut arg_values: Vec<V> = vec![];
+            let mut arg_poses: Vec<&Position> = vec![];
             for arg in args.iter() {
+                arg_poses.push(&arg.1);
                 let (value, _) = interpret(arg, context)?;
                 arg_values.push(value);
             }
             let mut call_context = Context::proc(context);
             match proc {
                 V::Proc(ref params, ref body) => {
-                    assign_params(params, arg_values, pos, context)?;
+                    assign_params(params, arg_values, arg_poses, context)?;
+                    context.trace(pos.clone());
                     interpret(body, context)?;
                 }
                 V::ForeignProc(ref params, ref func) => {
-                    assign_params(params, arg_values, pos, context)?;
+                    assign_params(params, arg_values, arg_poses, context)?;
+                    context.trace(pos.clone());
                     func(context, pos)?;
                 }
                 _ => {

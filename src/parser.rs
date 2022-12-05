@@ -284,12 +284,13 @@ impl Parser {
     pub fn operation(&mut self, layer_type: Layer, layer: usize, context: &mut Context) -> Result<Node, E> {
         match layer_type {
             Layer::Binary(ops) => {
-                let start = self.col;
+                let (start) = self.col;
                 let mut left = self.operation(self.ops(layer + 1), layer + 1, context)?;
                 while ops.contains(&self.token()) {
                     let op = self.token().to_owned();
                     self.advance();
                     let right = self.operation(self.ops(layer + 1), layer + 1, context)?;
+                    let stop = (right.1).1.end;
                     let n = match &left.0 {
                         N::Binary { op: op_, left: left_, right: right_ } if &op == op_ => 
                         N::Multi { op, nodes: vec![left_.as_ref().clone(), right_.as_ref().clone(), right] },
@@ -303,7 +304,7 @@ impl Parser {
                             op, left: Box::new(left.clone()), right: Box::new(right)
                         }
                     };
-                    left = Node(n, Position::new(self.ln..self.ln+1, start..self.col))
+                    left = Node(n, Position::new(self.ln..self.ln+1, start..stop))
                 }
                 Ok(left)
             }
@@ -313,9 +314,10 @@ impl Parser {
                     let op = self.token().to_owned();
                     self.advance();
                     let node = self.operation(self.ops(layer), layer, context)?;
+                    let stop = (node.1).1.end;
                     return Ok(Node(N::Unary{
                         op, node: Box::new(node)
-                    }, Position::new(self.ln..self.ln+1, start..self.col)))
+                    }, Position::new(self.ln..self.ln+1, start..stop)))
                 }
                 self.operation(self.ops(layer + 1), layer + 1, context)
             }
@@ -324,10 +326,11 @@ impl Parser {
                 let mut node = self.operation(self.ops(layer + 1), layer + 1, context)?;
                 while ops.contains(&self.token()) {
                     let op = self.token().to_owned();
+                    let stop = self.col;
                     self.advance();
                     node = Node(N::Unary{
                         op, node: Box::new(node.clone())
-                    }, Position::new(self.ln..self.ln+1, start..self.col));
+                    }, Position::new(self.ln..self.ln+1, start..stop));
                 }
                 Ok(node)
             }
@@ -351,19 +354,21 @@ impl Parser {
         if let T::Indent(i) = self.token() { indent += *i; self.advance(); }
         match self.token() {
             T::Var | T::Global => {
+                let (start_ln, start_col) = (self.ln, self.col);
                 let prefix = self.token().to_owned();
                 self.advance();
                 let id = self.operation(self.layers.last().unwrap().clone(), self.layers.len()-1, context)?;
                 self.advance_expect(T::Assign, context)?;
                 let expr = self.expr(context)?;
+                let (stop_ln, stop_col) = ((expr.1).0.end, (expr.1).1.end);
                 self.expect(T::EOL, context)?;
                 self.advance_ln();
                 Ok(Node(N::Assign {
                     global: prefix == T::Global, id: Box::new(id), expr: Box::new(expr)
-                }, Position::new(self.ln..self.ln+1, start..self.col)))
+                }, Position::new(start_ln..stop_ln, start_col..stop_col)))
             }
             T::If => {
-                let (start_ln, start_col) = (self.ln, self.col);
+                let (start_ln, mut stop_ln, start_col, mut stop_col) = (self.ln, self.col, self.ln, self.col);
                 self.advance();
                 let cond = self.expr(context)?;
                 self.expect(T::EOL, context)?;
@@ -373,9 +378,10 @@ impl Parser {
                 while let T::Indent(i) = self.token() {
                     if *i <= indent { break }
                     let node = self.stat(0, context)?;
+                    (stop_ln, stop_col) = ((node.1).0.end, (node.1).1.end);
                     nodes.push(node);
                 }
-                let body = Node(N::Body(nodes), Position::new(body_start_ln..self.ln, body_start_col..self.col));
+                let body = Node(N::Body(nodes), Position::new(body_start_ln..stop_ln, body_start_col..stop_col));
                 let mut else_indent = indent;
                 if let T::Indent(i) = self.token() { else_indent = *i; self.advance(); }
                 let mut else_body: Option<Box<Node>> = None;
@@ -390,17 +396,19 @@ impl Parser {
                         while let T::Indent(i) = self.token() {
                             if *i <= indent { break }
                             let node = self.stat(0, context)?;
+                            (stop_ln, stop_col) = ((node.1).0.end, (node.1).1.end);
                             else_nodes.push(node);
                         }
-                        else_body = Some(Box::new(Node(N::Body(else_nodes), Position::new(else_start_ln..self.ln, else_start_col..self.col))));
+                        else_body = Some(Box::new(Node(N::Body(else_nodes), Position::new(else_start_ln..stop_ln, else_start_col..stop_col))));
                     }
+                    (stop_ln, stop_col) = ((else_body.as_ref().unwrap().1).0.end, (else_body.as_ref().unwrap().1).1.end);
                 } else { else_indent = indent; self.revert(); } // revert if not `else`
                 Ok(Node(N::If {
                     cond: Box::new(cond), body: Box::new(body), else_body: else_body
-                }, Position::new(start_ln..self.ln, start_col..self.col)))
+                }, Position::new(start_ln..stop_ln, start_col..stop_col)))
             }
             T::While => {
-                let (start_ln, start_col) = (self.ln, self.col);
+                let (start_ln, mut stop_ln, start_col, mut stop_col) = (self.ln, self.col, self.ln, self.col);
                 self.advance();
                 let cond = self.expr(context)?;
                 self.expect(T::EOL, context)?;
@@ -410,15 +418,16 @@ impl Parser {
                 while let T::Indent(i) = self.token() {
                     if *i <= indent { break }
                     let node = self.stat(0, context)?;
+                    (stop_ln, stop_col) = ((node.1).0.end, (node.1).1.end);
                     nodes.push(node);
                 }
-                let body = Node(N::Body(nodes), Position::new(body_start_ln..self.ln, body_start_col..self.col));
+                let body = Node(N::Body(nodes), Position::new(body_start_ln..stop_ln, body_start_col..stop_col));
                 Ok(Node(N::While {
                     cond: Box::new(cond), body: Box::new(body)
-                }, Position::new(start_ln..self.ln, start_col..self.col)))
+                }, Position::new(start_ln..stop_ln, start_col..stop_col)))
             }
             T::For => {
-                let (start_ln, start_col) = (self.ln, self.col);
+                let (start_ln, mut stop_ln, start_col, mut stop_col) = (self.ln, self.col, self.ln, self.col);
                 self.advance();
                 let param = self.atom(context)?;
                 self.advance_expect(T::Out, context)?;
@@ -430,20 +439,22 @@ impl Parser {
                 while let T::Indent(i) = self.token() {
                     if *i <= indent { break }
                     let node = self.stat(0, context)?;
+                    (stop_ln, stop_col) = ((node.1).0.end, (node.1).1.end);
                     nodes.push(node);
                 }
-                let body = Node(N::Body(nodes), Position::new(body_start_ln..self.ln, body_start_col..self.col));
+                let body = Node(N::Body(nodes), Position::new(body_start_ln..stop_ln, body_start_col..stop_col));
                 Ok(Node(N::For {
                     param: Box::new(param), iter: Box::new(iter), body: Box::new(body)
-                }, Position::new(start_ln..self.ln, start_col..self.col)))
+                }, Position::new(start_ln..stop_ln, start_col..stop_col)))
             }
             T::Return => {
-                let start = self.col;
+                let (start_ln, start_col) = (self.ln, self.col);
                 self.advance();
                 let node = self.expr(context)?;
+                let (stop_ln, stop_col) = ((node.1).0.end, (node.1).1.end);
                 self.expect(T::EOL, context)?;
                 self.advance_ln();
-                Ok(Node(N::Return(Box::new(node)), Position::new(self.ln..self.ln+1, start..self.col)))
+                Ok(Node(N::Return(Box::new(node)), Position::new(start_ln..stop_ln, start_col..stop_col)))
             }
             T::Break => {
                 let node = Node(N::Break, self.pos().to_owned());
@@ -460,7 +471,7 @@ impl Parser {
                 Ok(node)
             }
             T::Proc => {
-                let (start_ln, start_col) = (self.ln, self.col);
+                let (start_ln, mut stop_ln, start_col, mut stop_col) = (self.ln, self.col, self.ln, self.col);
                 self.advance();
                 let name = self.atom(context)?;
                 let mut params: ProcParams = vec![];
@@ -489,15 +500,16 @@ impl Parser {
                 while let T::Indent(i) = self.token() {
                     if *i <= indent { break }
                     let node = self.stat(0, context)?;
+                    (stop_ln, stop_col) = ((node.1).0.end, (node.1).1.end);
                     nodes.push(node);
                 }
-                let body = Node(N::Body(nodes), Position::new(body_start_ln..self.ln, body_start_col..self.col));
+                let body = Node(N::Body(nodes), Position::new(body_start_ln..stop_ln, body_start_col..stop_col));
                 Ok(Node(N::Proc {
                     name: Box::new(name), params, body: Box::new(body)
-                }, Position::new(start_ln..self.ln, start_col..self.col)))
+                }, Position::new(start_ln..stop_ln, start_col..stop_col)))
             }
             T::Container => {
-                let (start_ln, start_col) = (self.ln, self.col);
+                let (start_ln, mut stop_ln, start_col, mut stop_col) = (self.ln, self.col, self.ln, self.col);
                 self.advance();
                 let name = self.atom(context)?;
                 self.expect(T::EOL, context)?;
@@ -507,15 +519,16 @@ impl Parser {
                 while let T::Indent(i) = self.token() {
                     if *i <= indent { break }
                     let node = self.stat(0, context)?;
+                    (stop_ln, stop_col) = ((node.1).0.end, (node.1).1.end);
                     nodes.push(node);
                 }
-                let body = Node(N::Body(nodes), Position::new(body_start_ln..self.ln, body_start_col..self.col));
+                let body = Node(N::Body(nodes), Position::new(body_start_ln..stop_ln, body_start_col..stop_col));
                 Ok(Node(N::Container {
                     name: Box::new(name), body: Box::new(body)
-                }, Position::new(start_ln..self.ln, start_col..self.col)))
+                }, Position::new(start_ln..stop_ln, start_col..stop_col)))
             }
             T::Rule => {
-                let (start_ln, start_col) = (self.ln, self.col);
+                let (start_ln, mut stop_ln, start_col, mut stop_col) = (self.ln, self.col, self.ln, self.col);
                 self.advance();
                 let name = self.atom(context)?;
                 self.advance_expect(T::In, context)?;
@@ -527,6 +540,7 @@ impl Parser {
                     if *i <= indent { break }
                     self.advance();
                     let node = self.expr(context)?;
+                    (stop_ln, stop_col) = ((node.1).0.end, (node.1).1.end);
                     let mut new: Option<Node> = None;
                     if self.token() == &T::Rep {
                         self.advance();
@@ -538,7 +552,7 @@ impl Parser {
                 }
                 Ok(Node(N::Rule {
                     name: Box::new(name), id: Box::new(id), rules
-                }, Position::new(start_ln..self.ln, start_col..self.col)))
+                }, Position::new(start_ln..stop_ln, start_col..stop_col)))
             }
             _ => {
                 let node = self.operation(self.layers.last().unwrap().clone(), self.layers.len()-1, context)?;
@@ -548,21 +562,24 @@ impl Parser {
                     let expr = self.expr(context)?;
                     self.expect(T::EOL, context)?;
                     self.advance_ln();
+                    let (ln, col) = ((expr.1).0.end, (expr.1).1.end);
                     return Ok(Node(N::OpAssign {
                         op, id: Box::new(node), expr: Box::new(expr)
-                    }, Position::new(self.ln..self.ln+1, start..self.col)))
+                    }, Position::new(ln..ln, start..col)))
                 }
                 if self.token() == &T::Inc {
+                    let (ln, col) = (self.ln, self.col);
                     self.advance();
                     self.expect(T::EOL, context)?;
                     self.advance_ln();
-                    return Ok(Node(N::Inc(Box::new(node)), Position::new(self.ln..self.ln+1, start..self.col)))
+                    return Ok(Node(N::Inc(Box::new(node)), Position::new(ln..ln+1, start..col+1)))
                 }
                 if self.token() == &T::Dec {
+                    let (ln, col) = (self.ln, self.col);
                     self.advance();
                     self.expect(T::EOL, context)?;
                     self.advance_ln();
-                    return Ok(Node(N::Dec(Box::new(node)), Position::new(self.ln..self.ln+1, start..self.col)))
+                    return Ok(Node(N::Dec(Box::new(node)), Position::new(ln..ln+1, start..col+1)))
                 }
                 self.advance_expect(T::Call, context)?;
                 let mut args: Vec<Node> = vec![];
@@ -571,10 +588,11 @@ impl Parser {
                     self.advance_if(T::Sep);
                     args.push(value);
                 }
+                let (ln, col) = (self.ln, self.col);
                 self.advance_ln();
                 Ok(Node(N::Call {
                     id: Box::new(node), args
-                }, Position::new(self.ln..self.ln+1, start..self.col)))
+                }, Position::new(ln..ln+1, start..col+1)))
             }
         }
     }
@@ -583,12 +601,13 @@ impl Parser {
         let node = self.operation(self.ops(0), 0, context)?;
         if self.token() == &T::If {
             self.advance();
-            let cond = self.operation(self.ops(0), 0, context)?;
+            let cond = self.expr(context)?;
             self.advance_expect(T::Else, context)?;
-            let else_node = self.operation(self.ops(0), 0, context)?;
+            let else_node = self.expr(context)?;
+            let stop = (else_node.1).1.end;
             return Ok(Node(N::IfExpr {
                 cond: Box::new(cond), node: Box::new(node), else_node: Box::new(else_node)
-            }, Position::new(self.ln..self.ln+1, start..self.col)))
+            }, Position::new(self.ln..self.ln+1, start..stop)))
         }
         Ok(node)
     }
@@ -604,10 +623,11 @@ impl Parser {
                 self.advance_if_line_break();
                 args.push(arg);
             }
+            let (stop_ln, stop_col) = (self.ln, self.col);
             self.advance();
             return Ok(Node(N::CallExpr {
                 id: Box::new(node), args
-            }, Position::new(start_ln..self.ln+1, start_col..self.col)))
+            }, Position::new(start_ln..stop_ln+1, start_col..stop_col+1)))
         }
         if self.token() == &T::ObjectIn {
             let arg = self.atom(context)?;
@@ -624,14 +644,15 @@ impl Parser {
         Ok(node)
     }
     pub fn field(&mut self, context: &mut Context) -> Result<Node, E> {
-        let start = self.col;
+        let (start_ln, start_col) = (self.ln, self.col);
         let mut head = self.atom(context)?;
         while self.token() == &T::Field {
             self.advance();
             let field = self.atom(context)?;
+            let (stop_ln, stop_col) = ((field.1).0.end, (field.1).1.end);
             head = Node(N::Field {
                 head: Box::new(head.clone()), field: Box::new(field.clone()) }
-            , Position::new(self.ln..self.ln+1, start..(field.1).1.end))
+            , Position::new(start_ln..stop_ln, start_col..stop_col))
         }
         Ok(head)
     }
