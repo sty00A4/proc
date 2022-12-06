@@ -61,18 +61,35 @@ Even though the language is already functional, it is far from being where I wan
 *If anyone wants to help with the language, [contact](#contact) me :)*
 
 ### Language relevant
+- Bracket indexing: `list[...]`
+- Vector element reassignment
+- Vector type creation: `vec[...]`
 - Type procedures (`str.join`, `vec.sum`, ...)
 ### Planned Features
+- String creation alternatives
+- Enums?
 - Error handeling
     - error value type
     - `throw` statement
     - `try ... catch ...` statement
+- OOP features
 ### Other
 - Rust macros for *value* and *type* generation
-- Built-in procedure containers
+- Built-in procedures and containers
+    - types
+        - `byte`, *int* from `0` to `255`
+        - `count`, *int* bigger than `0`
     - io
+        - `stdin`, `stdout`, `stderr` ?
+        - `read <- file: file_obj`
+        - `write <- file: file_obj, text: str`
     - fs
+        - `open <- path: str, mode: open_mode?`, returns an *obj* `file_obj`
+        - open_mode: `"r"`|`"w"`|`"a"`
     - http
+        - `get <- url: str`
+        - `post <- url: str, data: obj|vec[byte]|file_obj`
+        - `put <- url: str, data: obj|vec[byte]|file_obj`
     - lang *(the language itself: **parser**, **lexer**, ...)*
 
 # Contact
