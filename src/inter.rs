@@ -196,7 +196,7 @@ pub fn unary(op: &T, value: &V, pos: &Position, context: &mut Context) -> Result
         }
         T::Nullable => match value {
             V::Type(typ) => return Ok(V::Type(Type::create_union(vec![typ.clone(), Type::Undefined]))),
-            _ => {}
+            _ => return Err(E::Nullable(value.typ())),
         }
         _ => {
             context.trace(pos.clone());
@@ -239,9 +239,14 @@ pub fn apply_rule(rule_value: &V, value: &V, pos: &Position, context: &mut Conte
                                 rule_context.set(id, &v);
                                 new_value = v;
                             }
-                            Err(_) => {
-                                context.trace(rule.1.clone());
-                                return Err(E::RuleCast(value.clone(), name.clone()))
+                            Err(e) => {
+                                match e {
+                                    E::Cast(_, _) | E::RuleCast(_, _) => {
+                                        context.trace(rule.1.clone());
+                                        return Err(E::RuleCast(value.clone(), name.clone()))
+                                    }
+                                    _ => return Err(e)
+                                }
                             }
                         }
                     }
