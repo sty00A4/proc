@@ -75,6 +75,7 @@ Even though the language is already functional, it is far from being where I wan
 ### Planned Features
 - String creation alternatives
 - Lambda Functions `x -> x * 2`
+- Arguement collector `proc test <- ...`
 - Error handeling
     - error value type
     - `throw` statement
