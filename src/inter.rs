@@ -318,7 +318,12 @@ pub fn get_field(head: &V, head_node: &Node, field_node: &Node, pos: &Position, 
             context.trace(field_node.1.clone());
             Err(E::InvalidField(head.typ(), field.typ()))
         }
-        V::Vector(values, _) => {
+        V::Vector(values, _) => if let Node(N::ID(field), field_pos) = field_node {
+            // todo
+            context.trace(field_pos.clone());
+            dbg!(&context.trace);
+            Err(E::FieldNotFound(field.clone()))
+        } else {
             let (field, _) = interpret(field_node, context)?;
             match field {
                 V::Int(index) => if index >= 0 {
@@ -329,17 +334,19 @@ pub fn get_field(head: &V, head_node: &Node, field_node: &Node, pos: &Position, 
                             Err(E::IndexRange(values.len(), index))
                         }
                     }
-                } else if values.len() as i64 - index >= 0 {
-                    match values.get((values.len() as i64 - index) as usize) {
-                        Some(value) => Ok(value.clone()),
-                        None => {
-                            context.trace(field_node.1.clone());
-                            Err(E::IndexRange(values.len(), index))
-                        }
-                    }
                 } else {
-                    context.trace(field_node.1.clone());
-                    Err(E::IndexRange(values.len(), index))
+                    if values.len() as i64 - index >= 0 {
+                        match values.get((values.len() as i64 - index) as usize) {
+                            Some(value) => Ok(value.clone()),
+                            None => {
+                                context.trace(field_node.1.clone());
+                                Err(E::IndexRange(values.len(), index))
+                            }
+                        }
+                    } else {
+                        context.trace(field_node.1.clone());
+                        Err(E::IndexRange(values.len(), index))
+                    }
                 }
                 _ => {
                     context.trace(field_node.1.clone());
@@ -394,6 +401,68 @@ pub fn get_field(head: &V, head_node: &Node, field_node: &Node, pos: &Position, 
             let (field, _) = interpret(field_node, context)?;
             context.trace(field_node.1.clone());
             Err(E::InvalidField(head.typ(), field.typ()))
+        }
+        _ => {
+            context.trace(head_node.1.clone());
+            Err(E::InvalidHead(head.typ()))
+        }
+    }
+}
+pub fn get_field_value(head: &V, head_node: &Node, field: V, field_pos: &Position, pos: &Position, context: &mut Context) -> Result<V, E> {
+    match head {
+        V::Vector(values, _) => match field {
+            V::Int(index) => if index >= 0 {
+                match values.get(index as usize) {
+                    Some(value) => Ok(value.clone()),
+                    None => {
+                        context.trace(field_pos.clone());
+                        Err(E::IndexRange(values.len(), index))
+                    }
+                }
+            } else if values.len() as i64 - index >= 0 {
+                match values.get((values.len() as i64 - index) as usize) {
+                    Some(value) => Ok(value.clone()),
+                    None => {
+                        context.trace(field_pos.clone());
+                        Err(E::IndexRange(values.len(), index))
+                    }
+                }
+            } else {
+                context.trace(field_pos.clone());
+                Err(E::IndexRange(values.len(), index))
+            }
+            _ => {
+                context.trace(field_pos.clone());
+                Err(E::InvalidField(head.typ(), field.typ()))
+            }
+        }
+        V::Tuple(values) => match field {
+            V::Int(index) => if index >= 0 {
+                match values.get(index as usize) {
+                    Some(value) => Ok(value.clone()),
+                    None => {
+                        context.trace(field_pos.clone());
+                        Err(E::IndexRange(values.len(), index))
+                    }
+                }
+            } else {
+                if values.len() as i64 - index >= 0 {
+                    match values.get((values.len() as i64 - index) as usize) {
+                        Some(value) => Ok(value.clone()),
+                        None => {
+                            context.trace(field_pos.clone());
+                            Err(E::IndexRange(values.len(), index))
+                        }
+                    }
+                } else {
+                    context.trace(field_pos.clone());
+                    Err(E::IndexRange(values.len(), index))
+                }
+            }
+            _ => {
+                context.trace(field_pos.clone());
+                Err(E::InvalidField(head.typ(), field.typ()))
+            }
         }
         _ => {
             context.trace(head_node.1.clone());
@@ -578,18 +647,19 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                 let (value, _) = interpret(arg, context)?;
                 arg_values.push(value);
             }
-            let mut call_context = Context::proc(context);
+            let old_context = context.clone();
+            *context = Context::proc(context);
             let mut value = V::Null;
             match proc {
                 V::Proc(ref params, ref body) => {
-                    assign_params(params, arg_values, arg_poses, &mut call_context)?;
+                    assign_params(params, arg_values, arg_poses, context)?;
                     context.trace(pos.clone());
-                    (value, _) = interpret(body, &mut call_context)?;
+                    (value, _) = interpret(body, context)?;
                 }
                 V::ForeignProc(ref params, ref func) => {
-                    assign_params(params, arg_values, arg_poses, &mut call_context)?;
+                    assign_params(params, arg_values, arg_poses, context)?;
                     context.trace(pos.clone());
-                    value = func(&mut call_context, pos)?;
+                    value = func(context, pos)?;
                 }
                 V::Type(typ) => {
                     let arg = arg_values.get(0).unwrap_or_else(|| &V::Null);
@@ -629,7 +699,7 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                 }
                 V::Rule(_, _, _) => {
                     let arg = arg_values.get(0).unwrap_or_else(|| &V::Null);
-                    value = apply_rule(&proc, arg, pos, &mut call_context)?;
+                    value = apply_rule(&proc, arg, pos, context)?;
                 }
                 _ => {
                     context.trace(pos.clone());
@@ -638,11 +708,18 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                     ]), proc.typ()))
                 }
             }
+            *context = old_context;
             Ok((value, R::None))
         }
         Node(N::Field { head: head_node, field: field_node }, pos) => {
             let (head, _) = interpret(head_node, context)?;
             let value = get_field(&head, head_node, field_node, pos, context)?;
+            Ok((value, R::None))
+        }
+        Node(N::FieldExpr { head: head_node, expr }, pos) => {
+            let (head, _) = interpret(head_node, context)?;
+            let (field, _) = interpret(expr, context)?;
+            let value = get_field_value(&head, head_node, field, &expr.1, pos, context)?;
             Ok((value, R::None))
         }
         Node(N::IfExpr { cond: cond_node, node, else_node }, pos) => {
@@ -880,7 +957,8 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                 let (value, _) = interpret(arg, context)?;
                 arg_values.push(value);
             }
-            let mut call_context = Context::proc(context);
+            let old_context = context.clone();
+            *context = Context::proc(context);
             match proc {
                 V::Proc(ref params, ref body) => {
                     assign_params(params, arg_values, arg_poses, context)?;
@@ -897,6 +975,7 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                     return Err(E::ExpectedType(Type::Union(vec![Type::Proc, Type::ForeignProc]), proc.typ()))
                 }
             }
+            *context = old_context;
             Ok((V::Null, R::None))
         }
         Node(N::If { cond: cond_node, body, else_body }, _) => {

@@ -19,7 +19,7 @@ pub enum N {
     IfExpr { cond: Box<Node>, node: Box<Node>, else_node: Box<Node> },
     Proc { name: Box<Node>, params: ProcParams, body: Box<Node> }, Rule { name: Box<Node>, id: Box<Node>, rules: Rules },
     Container { name: Box<Node>, body: Box<Node> },
-    Field { head: Box<Node>, field: Box<Node> },
+    Field { head: Box<Node>, field: Box<Node> }, FieldExpr { head: Box<Node>, expr: Box<Node> },
 }
 impl N {
     pub fn name(&self) -> &str {
@@ -56,6 +56,7 @@ impl N {
             Self::Rule { name:_, id:_, rules:_ } => "rule definition",
             Self::Container { name:_, body:_ } => "container definition",
             Self::Field { head:_, field:_ } => "field",
+            Self::FieldExpr { head:_, expr:_ } => "field expression",
         }
     }
 }
@@ -120,6 +121,7 @@ impl std::fmt::Display for N {
             .collect::<Vec<String>>().join("; ")),
             Self::Container { name, body } => write!(f, "proc {name} {body}"),
             Self::Field { head, field } => write!(f, "{head}.{field}"),
+            Self::FieldExpr { head, expr } => write!(f, "{head}[{expr}]"),
         }
     }
 }
@@ -193,6 +195,7 @@ impl Node {
             .collect::<Vec<String>>().join("\n")),
             N::Container { name, body } => format!("{s}proc {}\n{}", name.display(indent), body.display(indent + 1)),
             N::Field { head, field } => format!("{}.{}", head.display(indent), field.display(indent)),
+            N::FieldExpr { head, expr } => format!("{}[{}]", head.display(indent), expr.display(indent)),
         }
     }
 }
