@@ -2,11 +2,16 @@
 An interpreted programming language, implementing the concepts of rules and containers. The language is not finished yet, [To-Do](#to-do)
 
 # Content
+- [Proc](#proc)
+- [Content](#content)
 - [Guide](#guide)
-    - [Types](#types)
-    - [Rules](#rules)
-    - [Container](#container)
+  - [Types](#types)
+  - [Rules](#rules)
+  - [Container](#container)
 - [To-Do](#to-do)
+    - [Language relevant](#language-relevant)
+    - [Planned Features](#planned-features)
+    - [Other](#other)
 - [Contact](#contact)
 
 ---
@@ -29,6 +34,8 @@ An interpreted programming language, implementing the concepts of rules and cont
 `vec` - short for *vector*, a sequence of values
 
 `obj` - short for *object*, a table of keys and values
+
+`proc` - a procedure
 
 `rule` - a [rule](#rules)
 
@@ -61,17 +68,18 @@ Even though the language is already functional, it is far from being where I wan
 *If anyone wants to help with the language, [contact](#contact) me :)*
 
 ### Language relevant
-- Bracket indexing: `list[...]`
 - Vector element reassignment
 - Vector type creation: `vec[...]`
+- Ranges `start..end`
 - Type procedures (`str.join`, `vec.sum`, ...)
 ### Planned Features
 - String creation alternatives
-- Enums?
+- Lambda Functions `x -> x * 2`
 - Error handeling
     - error value type
     - `throw` statement
     - `try ... catch ...` statement
+- Enums?
 - OOP features
 ### Other
 - Rust macros for *value* and *type* generation
@@ -83,14 +91,14 @@ Even though the language is already functional, it is far from being where I wan
         - `stdin`, `stdout`, `stderr` ?
         - `read <- file: file_obj`
         - `write <- file: file_obj, text: str`
-    - fs
-        - `open <- path: str, mode: open_mode?`, returns an *obj* `file_obj`
-        - open_mode: `"r"`|`"w"`|`"a"`
     - http
         - `get <- url: str`
         - `post <- url: str, data: obj|vec[byte]|file_obj`
         - `put <- url: str, data: obj|vec[byte]|file_obj`
     - lang *(the language itself: **parser**, **lexer**, ...)*
+- VSCode language extension
+    - Syntax highlighting
+    - Error display
 
 # Contact
 

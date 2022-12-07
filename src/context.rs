@@ -1,4 +1,4 @@
-use std::{collections::HashMap, io::Write};
+use std::{collections::HashMap, io::Write, fs};
 use crate::*;
 
 pub type Trace = Vec<(Position, String)>;
@@ -127,6 +127,17 @@ pub fn _assert(context: &mut Context, pos: &Position) -> Result<V, E> {
     }
     Ok(V::Null)
 }
+pub fn fs_read(context: &mut Context, pos: &Position) -> Result<V, E> {
+    let path = context.get(&String::from("path"));
+    if let Some(V::String(path)) = path {
+        match fs::read_to_string(path) {
+            Ok(text) => Ok(V::String(text)),
+            Err(_) => Err(E::FileNotFound(path.clone()))
+        }
+    } else {
+        Err(E::FileNotFound("<NO_FILE>".into()))
+    }
+}
 pub fn std_context(context: &mut Context) {
     fn type_node(typ: Type) -> Node {
         Node(N::Type(typ), Position::new(0..0, 0..0))
@@ -140,5 +151,10 @@ pub fn std_context(context: &mut Context) {
     context.def(&String::from("assert"), &V::ForeignProc(vec![
         ("x".into(), None, false)
     ], _assert));
+    let mut fs_context = Context::new(&String::from("<FS>"));
+    fs_context.def(&String::from("read"), &V::ForeignProc(vec![
+        ("path".into(), Some(type_node(Type::String)), false)
+    ], fs_read));
+    context.def(&String::from("fs"), &&V::Container(fs_context));
     // todo more std functions: io, fs, language primitivesss
 }
