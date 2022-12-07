@@ -665,16 +665,16 @@ impl Parser {
                     let field = self.atom(context)?;
                     let (stop_ln, stop_col) = ((field.1).0.end, (field.1).1.end);
                     head = Node(N::Field {
-                        head: Box::new(head.clone()), field: Box::new(field.clone()) }
+                        head: Box::new(head.clone()), field: Box::new(field) }
                     , Position::new(start_ln..stop_ln, start_col..stop_col))
                 }
                 T::VectorIn => {
                     self.advance();
-                    let field = self.expr(context)?;
+                    let expr = self.expr(context)?;
                     let (stop_ln, stop_col) = (self.ln, self.col);
                     self.advance_expect(T::VectorOut, context)?;
-                    head = Node(N::Field {
-                        head: Box::new(head.clone()), field: Box::new(field.clone()) }
+                    head = Node(N::FieldExpr {
+                        head: Box::new(head.clone()), expr: Box::new(expr) }
                     , Position::new(start_ln..stop_ln, start_col..stop_col))
                 }
                 _ => {}
