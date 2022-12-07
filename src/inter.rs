@@ -1059,7 +1059,7 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                     if let V::Int(end) = end_value {
                         let mut step: i64 = 1;
                         if let Some(step_node) = step_node {
-                            let (step_value, _) = interpret(end_node, context)?;
+                            let (step_value, _) = interpret(step_node, context)?;
                             if let V::Int(value) = step_value {
                                 step = value
                             } else {
@@ -1073,7 +1073,7 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                             let (value, ret) = interpret(body, context)?;
                             if ret == R::Return { return Ok((value, ret)) }
                             if ret == R::Break { break }
-                            i += 1;
+                            i += step;
                         }
                         context.del(param);
                         Ok((V::Null, R::None))
