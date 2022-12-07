@@ -68,7 +68,6 @@ Even though the language is already functional, it is far from being where I wan
 *If anyone wants to help with the language, [contact](#contact) me :)*
 
 ### Language relevant
-- Bracket indexing: `list[...]`
 - Vector element reassignment
 - Vector type creation: `vec[...]`
 - Ranges `start..end`

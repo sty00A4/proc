@@ -655,13 +655,27 @@ impl Parser {
     pub fn field(&mut self, context: &mut Context) -> Result<Node, E> {
         let (start_ln, start_col) = (self.ln, self.col().start);
         let mut head = self.atom(context)?;
-        while self.token() == &T::Field {
-            self.advance();
-            let field = self.atom(context)?;
-            let (stop_ln, stop_col) = ((field.1).0.end, (field.1).1.end);
-            head = Node(N::Field {
-                head: Box::new(head.clone()), field: Box::new(field.clone()) }
-            , Position::new(start_ln..stop_ln, start_col..stop_col))
+        while self.token() == &T::Field || self.token() == &T::VectorIn {
+            match self.token() {
+                T::Field => {
+                    self.advance();
+                    let field = self.atom(context)?;
+                    let (stop_ln, stop_col) = ((field.1).0.end, (field.1).1.end);
+                    head = Node(N::Field {
+                        head: Box::new(head.clone()), field: Box::new(field.clone()) }
+                    , Position::new(start_ln..stop_ln, start_col..stop_col))
+                }
+                T::VectorIn => {
+                    self.advance();
+                    let field = self.expr(context)?;
+                    let (stop_ln, stop_col) = (self.ln, self.col);
+                    self.advance_expect(T::VectorOut, context)?;
+                    head = Node(N::Field {
+                        head: Box::new(head.clone()), field: Box::new(field.clone()) }
+                    , Position::new(start_ln..stop_ln, start_col..stop_col))
+                }
+                _ => {}
+            }
         }
         Ok(head)
     }
