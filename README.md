@@ -91,17 +91,14 @@ Even though the language is already functional, it is far from being where I wan
         - `stdin`, `stdout`, `stderr` ?
         - `read <- file: file_obj`
         - `write <- file: file_obj, text: str`
-    - fs
-        - `open <- path: str, mode: open_mode?`, returns an *obj* `file_obj`
-        - open_mode: `"r"`|`"w"`|`"a"`
     - http
         - `get <- url: str`
         - `post <- url: str, data: obj|vec[byte]|file_obj`
         - `put <- url: str, data: obj|vec[byte]|file_obj`
     - lang *(the language itself: **parser**, **lexer**, ...)*
 - VSCode language extension
-  - Syntax highlighting
-  - Error display
+    - Syntax highlighting
+    - Error display
 
 # Contact
 
