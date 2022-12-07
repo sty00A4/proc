@@ -132,10 +132,10 @@ pub fn fs_read(context: &mut Context, pos: &Position) -> Result<V, E> {
     if let Some(V::String(path)) = path {
         match fs::read_to_string(path) {
             Ok(text) => Ok(V::String(text)),
-            Err(_) => Err(E::FieldNotFound(path.clone()))
+            Err(_) => Err(E::FileNotFound(path.clone()))
         }
     } else {
-        Err(E::FieldNotFound("<NO_FILE>".into()))
+        Err(E::FileNotFound("<NO_FILE>".into()))
     }
 }
 pub fn std_context(context: &mut Context) {
