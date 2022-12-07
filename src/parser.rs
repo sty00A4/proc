@@ -258,7 +258,7 @@ impl Parser {
         }
     }
     pub fn advance(&mut self) { self.col += 1; }
-    pub fn revert(&mut self) { self.col -= if self.col > 1 { 1 } else { 0 }; }
+    pub fn revert(&mut self) { self.col -= if self.col > 0 { 1 } else { 0 }; }
     pub fn advance_ln(&mut self) { self.ln += 1; self.col = 0; }
     pub fn advance_expect(&mut self, token: T, context: &mut Context) -> Result<(), E> {
         self.expect(token, context)?;
@@ -564,7 +564,7 @@ impl Parser {
                 }, Position::new(start_ln..stop_ln, start_col..stop_col)))
             }
             _ => {
-                let node = self.operation(self.layers.last().unwrap().clone(), self.layers.len()-1, context)?;
+                let node = self.field(context)?;
                 if [T::Assign, T::AddAssign, T::SubAssign, T::MulAssign, T::DivAssign, T::ModAssign].contains(&self.token()) {
                     let op = self.token().to_owned();
                     self.advance();

@@ -318,11 +318,7 @@ pub fn get_field(head: &V, head_node: &Node, field_node: &Node, pos: &Position, 
             context.trace(field_node.1.clone());
             Err(E::InvalidField(head.typ(), field.typ()))
         }
-        V::Vector(values, _) => if let Node(N::ID(field), field_pos) = field_node {
-            // todo
-            context.trace(field_pos.clone());
-            Err(E::FieldNotFound(field.clone()))
-        } else {
+        V::Vector(values, _) => {
             let (field, _) = interpret(field_node, context)?;
             match field {
                 V::Int(index) => if index >= 0 {
@@ -642,7 +638,6 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                     ]), proc.typ()))
                 }
             }
-            context.pop_trace();
             Ok((value, R::None))
         }
         Node(N::Field { head: head_node, field: field_node }, pos) => {
@@ -902,7 +897,6 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                     return Err(E::ExpectedType(Type::Union(vec![Type::Proc, Type::ForeignProc]), proc.typ()))
                 }
             }
-            context.pop_trace();
             Ok((V::Null, R::None))
         }
         Node(N::If { cond: cond_node, body, else_body }, _) => {
