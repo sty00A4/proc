@@ -253,7 +253,10 @@ impl Parser {
         match self.tokens.get(self.ln) {
             Some(line) => match line.get(self.col) {
                 Some(token) => &token.1,
-                None => &line.last().unwrap().1
+                None => match &line.last() {
+                    Some(token) => &token.1,
+                    None => &self.tokens.last().unwrap().last().unwrap().1
+                }
             }
             None => &self.tokens.last().unwrap().last().unwrap().1
         }
@@ -262,9 +265,9 @@ impl Parser {
         match self.tokens.get(self.ln) {
             Some(line) => match line.get(self.col) {
                 Some(token) => &(token.1).1,
-                None => &(line.last().unwrap().1).1
+                None => &(0..1)
             }
-            None => &(self.tokens.last().unwrap().last().unwrap().1).1
+            None => &(0..1)
         }
     }
     pub fn advance(&mut self) { self.col += 1; }
