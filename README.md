@@ -70,7 +70,6 @@ Even though the language is already functional, it is far from being where I wan
 ### Language relevant
 - Vector element reassignment
 - Vector type creation: `vec[...]`
-- Ranges `start..end`
 - Type procedures (`str.join`, `vec.sum`, ...)
 ### Planned Features
 - String creation alternatives

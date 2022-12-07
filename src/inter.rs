@@ -1047,5 +1047,43 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                 Err(E::ExpectedNode(N::ID("_".into()), param_node.0.clone()))
             }
         }
+        Node(N::ForRange { param: param_node, start: start_node, end: end_node, step: step_node, body }, pos) => {
+            if let Node(N::ID(param), param_pos) = param_node.as_ref() {
+                let (start_value, _) = interpret(start_node, context)?;
+                if let V::Int(start) = start_value {
+                    let (end_value, _) = interpret(end_node, context)?;
+                    if let V::Int(end) = end_value {
+                        let mut step: i64 = 1;
+                        if let Some(step_node) = step_node {
+                            let (step_value, _) = interpret(end_node, context)?;
+                            if let V::Int(value) = step_value {
+                                step = value
+                            } else {
+                                context.trace(step_node.1.clone());
+                                return Err(E::ExpectedType(Type::Int, step_value.typ()))
+                            }
+                        }
+                        let mut i: i64 = start;
+                        while i < end {
+                            context.set(param, &V::Int(i));
+                            let (value, ret) = interpret(body, context)?;
+                            if ret == R::Return { return Ok((value, ret)) }
+                            if ret == R::Break { break }
+                            i += 1;
+                        }
+                        Ok((V::Null, R::None))
+                    } else {
+                        context.trace(end_node.1.clone());
+                        Err(E::ExpectedType(Type::Int, end_value.typ()))
+                    }
+                } else {
+                    context.trace(start_node.1.clone());
+                    Err(E::ExpectedType(Type::Int, start_value.typ()))
+                }
+            } else {
+                context.trace(param_node.1.clone());
+                Err(E::ExpectedNode(N::ID("_".into()), param_node.0.clone()))
+            }
+        }
     }
 }

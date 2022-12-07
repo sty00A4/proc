@@ -16,6 +16,7 @@ pub enum N {
     Call { id: Box<Node>, args: Vec<Node> }, CallExpr { id: Box<Node>, args: Vec<Node> },
     If { cond: Box<Node>, body: Box<Node>, else_body: Option<Box<Node>> }, While { cond: Box<Node>, body: Box<Node> },
     For { param: Box<Node>, iter: Box<Node>, body: Box<Node> },
+    ForRange { param: Box<Node>, start: Box<Node>, end: Box<Node>, step: Option<Box<Node>>, body: Box<Node> },
     IfExpr { cond: Box<Node>, node: Box<Node>, else_node: Box<Node> },
     Proc { name: Box<Node>, params: ProcParams, body: Box<Node> }, Rule { name: Box<Node>, id: Box<Node>, rules: Rules },
     Container { name: Box<Node>, body: Box<Node> },
@@ -51,6 +52,7 @@ impl N {
             Self::If { cond:_, body:_, else_body:_ } => "if statement",
             Self::While { cond:_, body:_ } => "while statement",
             Self::For { param:_, iter:_, body:_ } => "for statement",
+            Self::ForRange { param:_, start:_, end:_, step:_, body:_ } => "for-range statement",
             Self::IfExpr { cond:_, node:_, else_node:_ } => "if expression",
             Self::Proc { name:_, params:_, body:_ } => "procedure definition",
             Self::Rule { name:_, id:_, rules:_ } => "rule definition",
@@ -106,6 +108,8 @@ impl std::fmt::Display for N {
             Self::IfExpr { cond, node, else_node } => write!(f, "{node} if {cond} else {else_node}"),
             Self::While { cond, body } => write!(f, "while {cond} {body}"),
             Self::For { param, iter, body } => write!(f, "for {param} in {iter} {body}"),
+            Self::ForRange { param, start, end, step, body } => write!(f, "for {param} = {start}, {end}{} {body}",
+            if let Some(step) = step { format!(", {step}") } else { "".to_string() }),
             Self::Proc { name, params, body } => write!(f, "proc {name} <- {} {body}",
             params.iter().map(|(id, typ, apply)|
                 match typ {
@@ -137,7 +141,7 @@ impl Node {
         let s = String::from("    ").repeat(indent);
         match &self.0 {
             N::Body(nodes) => format!("{}", nodes.iter().map(|x| format!("{}", x.display(indent)))
-            .collect::<Vec<String>>().join("\n")),
+                .collect::<Vec<String>>().join("\n")),
             N::Wildcard => format!("_"),
             N::Null => format!("null"),
             N::Int(v) => format!("{v:?}"),
@@ -148,13 +152,13 @@ impl Node {
             N::Tuple(v) => format!("({})", v.iter().map(|x| x.display(indent)).collect::<Vec<String>>().join(", ")),
             N::Object(v) => format!("{{ {} }}",
             v.iter().map(|(k, v)| format!("{} = {}", k.display(indent), v.display(indent)))
-            .collect::<Vec<String>>().join(", ")),
+                .collect::<Vec<String>>().join(", ")),
             N::ID(v) => format!("{v}"),
             N::Type(v) => format!("{v}"),
             N::Binary { op, left, right } => format!("{} {op} {}", left.display(indent), right.display(indent)),
             N::Unary { op, node } => format!("{op} {}", node.display(indent)),
             N::Multi { op, nodes } => format!("{op} {}",
-            nodes.iter().map(|x| x.display(indent)).collect::<Vec<String>>().join(" ")),
+                nodes.iter().map(|x| x.display(indent)).collect::<Vec<String>>().join(" ")),
             N::Assign { global, id, expr } => if *global {
                 format!("{s}global {} = {}", id.display(indent), expr.display(indent))
             } else {
@@ -167,32 +171,35 @@ impl Node {
             N::Break => format!("{s}break"),
             N::Continue => format!("{s}continue"),
             N::Call { id, args } => format!("{s}{}! {}", id.display(indent),
-            args.iter().map(|x| x.display(indent)).collect::<Vec<String>>().join(", ")),
+                args.iter().map(|x| x.display(indent)).collect::<Vec<String>>().join(", ")),
             N::CallExpr { id, args } => format!("{}({})", id.display(indent),
-            args.iter().map(|x| x.display(indent)).collect::<Vec<String>>().join(", ")),
+                args.iter().map(|x| x.display(indent)).collect::<Vec<String>>().join(", ")),
             N::If { cond, body, else_body } => match else_body {
                 Some(else_body) => format!("{s}if {} \n{}\n{s}else\n{}", cond.display(indent),
                 body.display(indent + 1), else_body.display(indent + 1)),
                 None => format!("{s}if {} \n{}\n", cond.display(indent), body.display(indent + 1))
             },
             N::IfExpr { cond, node, else_node } => format!("{} if {} else {}", node.display(indent),
-            cond.display(indent), else_node.display(indent)),
+                cond.display(indent), else_node.display(indent)),
             N::While { cond, body } => format!("{s}while {} \n{}", cond.display(indent), body.display(indent + 1)),
             N::For { param, iter, body } => format!("{s}for {} in {}\n{}", param.display(indent), iter.display(indent), body.display(indent + 1)),
+            N::ForRange { param, start, end, step, body } => format!("{s}for {} = {}, {}{}\n{}",
+                param.display(indent), start.display(indent), end.display(indent),
+                if let Some(step) = step { format!(", {step}") } else { "".to_string() }, body.display(indent + 1)),
             N::Proc { name, params, body } => format!("{s}proc {} <- {}\n{}", name.display(indent),
-            params.iter().map(|(id, typ, apply)|
-                match typ {
-                    Some(typv) => format!("{} : {}{}", id.display(indent), typv.display(indent), if *apply { "!" } else { "" }),
-                    None => format!("{}", id.display(indent))
-                }
-            ).collect::<Vec<String>>().join(" "), body.display(indent + 1)),
+                params.iter().map(|(id, typ, apply)|
+                    match typ {
+                        Some(typv) => format!("{} : {}{}", id.display(indent), typv.display(indent), if *apply { "!" } else { "" }),
+                        None => format!("{}", id.display(indent))
+                    }
+                ).collect::<Vec<String>>().join(" "), body.display(indent + 1)),
             N::Rule { name, id, rules } => format!("{s}rule {} <- {}\n{}",
-            name.display(indent), id.display(indent),
-            rules.iter().map(|(rule, new)| match new {
-                Some(new) => format!("{s}    {} : {}", rule.display(indent), new.display(indent)),
-                None => format!("{s}    {}", rule.display(indent))
-            })
-            .collect::<Vec<String>>().join("\n")),
+                name.display(indent), id.display(indent),
+                rules.iter().map(|(rule, new)| match new {
+                    Some(new) => format!("{s}    {} : {}", rule.display(indent), new.display(indent)),
+                    None => format!("{s}    {}", rule.display(indent))
+                })
+                .collect::<Vec<String>>().join("\n")),
             N::Container { name, body } => format!("{s}proc {}\n{}", name.display(indent), body.display(indent + 1)),
             N::Field { head, field } => format!("{}.{}", head.display(indent), field.display(indent)),
             N::FieldExpr { head, expr } => format!("{}[{}]", head.display(indent), expr.display(indent)),
@@ -442,22 +449,51 @@ impl Parser {
                 let (start_ln, mut stop_ln, start_col, mut stop_col) = (self.ln, self.col().start, self.ln, self.col().end);
                 self.advance();
                 let param = self.atom(context)?;
-                self.advance_expect(T::Out, context)?;
-                let iter = self.expr(context)?;
-                self.expect(T::EOL, context)?;
-                self.advance_ln();
-                let mut nodes: Vec<Node> = vec![];
-                let (body_start_ln, body_start_col) = (self.ln, self.col().start);
-                while let T::Indent(i) = self.token() {
-                    if *i <= indent { break }
-                    let node = self.stat(0, context)?;
-                    (stop_ln, stop_col) = ((node.1).0.end, (node.1).1.end);
-                    nodes.push(node);
+                if self.token() == &T::Out {
+                    self.advance();
+                    let iter = self.expr(context)?;
+                    self.expect(T::EOL, context)?;
+                    self.advance_ln();
+                    let mut nodes: Vec<Node> = vec![];
+                    let (body_start_ln, body_start_col) = (self.ln, self.col().start);
+                    while let T::Indent(i) = self.token() {
+                        if *i <= indent { break }
+                        let node = self.stat(0, context)?;
+                        (stop_ln, stop_col) = ((node.1).0.end, (node.1).1.end);
+                        nodes.push(node);
+                    }
+                    let body = Node(N::Body(nodes), Position::new(body_start_ln..stop_ln, body_start_col..stop_col));
+                    Ok(Node(N::For {
+                        param: Box::new(param), iter: Box::new(iter), body: Box::new(body)
+                    }, Position::new(start_ln..stop_ln, start_col..stop_col)))
+                } else if self.token() == &T::Assign {
+                    self.advance();
+                    let start = self.expr(context)?;
+                    self.advance_if(T::Sep);
+                    let end = self.expr(context)?;
+                    let mut step: Option<Box<Node>> = None;
+                    if self.token() != &T::EOL {
+                        self.advance_if(T::Sep);
+                        step = Some(Box::new(self.expr(context)?));
+                    }
+                    self.expect(T::EOL, context)?;
+                    self.advance_ln();
+                    let mut nodes: Vec<Node> = vec![];
+                    let (body_start_ln, body_start_col) = (self.ln, self.col().start);
+                    while let T::Indent(i) = self.token() {
+                        if *i <= indent { break }
+                        let node = self.stat(0, context)?;
+                        (stop_ln, stop_col) = ((node.1).0.end, (node.1).1.end);
+                        nodes.push(node);
+                    }
+                    let body = Node(N::Body(nodes), Position::new(body_start_ln..stop_ln, body_start_col..stop_col));
+                    Ok(Node(N::ForRange {
+                        param: Box::new(param), start: Box::new(start), end: Box::new(end), step, body: Box::new(body)
+                    }, Position::new(start_ln..stop_ln, start_col..stop_col)))
+                } else {
+                    context.trace(self.pos().clone());
+                    Err(E::UnexpectedToken(self.token().clone()))
                 }
-                let body = Node(N::Body(nodes), Position::new(body_start_ln..stop_ln, body_start_col..stop_col));
-                Ok(Node(N::For {
-                    param: Box::new(param), iter: Box::new(iter), body: Box::new(body)
-                }, Position::new(start_ln..stop_ln, start_col..stop_col)))
             }
             T::Return => {
                 let (start_ln, start_col) = (self.ln, self.col().start);
