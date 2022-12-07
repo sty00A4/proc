@@ -20,6 +20,9 @@ impl Scope {
     pub fn set(&mut self, id: &String, v: &V) -> Option<V> {
         self.vars.insert(id.to_owned(), v.to_owned())
     }
+    pub fn del(&mut self, id: &String) -> Option<V> {
+        self.vars.remove(id)
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -84,6 +87,17 @@ impl Context {
     }
     pub fn def(&mut self, id: &String, v: &V) -> Option<V> {
         self.global.set(id, v)
+    }
+    pub fn del(&mut self, id: &String) -> Option<V> {
+        if let Some(_) = self.global.get(id) {
+            return self.global.del(id)
+        }
+        for scope in self.stack.iter_mut().rev() {
+            if let Some(_) = scope.get(id) {
+                return scope.del(id)
+            }
+        }
+        self.stack.last_mut().unwrap().del(id)
     }
     
     pub fn trace(&mut self, pos: Position) {

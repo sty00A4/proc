@@ -1008,6 +1008,7 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                             if ret == R::Return { return Ok((value, ret)) }
                             if ret == R::Break { break }
                         }
+                        context.del(param);
                         Ok((V::Null, R::None))
                     }
                     V::String(string) => {
@@ -1017,6 +1018,7 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                             if ret == R::Return { return Ok((value, ret)) }
                             if ret == R::Break { break }
                         }
+                        context.del(param);
                         Ok((V::Null, R::None))
                     }
                     V::Tuple(values) => {
@@ -1026,6 +1028,7 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                             if ret == R::Return { return Ok((value, ret)) }
                             if ret == R::Break { break }
                         }
+                        context.del(param);
                         Ok((V::Null, R::None))
                     }
                     V::Object(values) => {
@@ -1035,6 +1038,7 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                             if ret == R::Return { return Ok((value, ret)) }
                             if ret == R::Break { break }
                         }
+                        context.del(param);
                         Ok((V::Null, R::None))
                     }
                     _ => {
@@ -1071,6 +1075,7 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                             if ret == R::Break { break }
                             i += 1;
                         }
+                        context.del(param);
                         Ok((V::Null, R::None))
                     } else {
                         context.trace(end_node.1.clone());
