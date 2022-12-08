@@ -352,9 +352,6 @@ impl PartialEq for Type {
             }
             Self::Vector(t1) => match other {
                 Self::Vector(t2) => {
-                    for type1 in t1.iter() {
-                        if !t2.contains(type1) { return false }
-                    }
                     for type2 in t2.iter() {
                         if !t1.contains(type2) { return false }
                     }
