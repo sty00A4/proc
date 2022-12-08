@@ -151,6 +151,15 @@ impl V {
     pub fn bool(value: &V) -> Self {
         Type::Bool.cast(value).unwrap_or_else(|| Self::Bool(false))
     }
+    pub fn create_union(values: Vec<Self>) -> Vec<Type> {
+        let mut collected: Vec<Type> = vec![];
+        for v in values {
+            if !collected.contains(&v.typ()) {
+                collected.push(v.typ());
+            }
+        }
+        collected
+    }
 }
 
 #[derive(Clone)]

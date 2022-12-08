@@ -470,11 +470,11 @@ pub fn get_field_value(head: &V, head_node: &Node, field: V, field_pos: &Positio
         }
     }
 }
-pub fn assign_new_value(new_value: V, id_node: &Node, pos: &Position, context: &mut Context) -> Result<(V, R), E> {
+pub fn assign_new_value(new_value: V, id_node: &Node, pos: &Position, context: &mut Context) -> Result<(), E> {
     match id_node {
         Node(N::ID(id), id_pos) => {
             context.set(id, &new_value);
-            Ok((V::Null, R::None))
+            Ok(())
         }
         Node(N::Field { head: head_node, field: field_node }, field_pos) =>
             match head_node.as_ref() {
@@ -485,15 +485,15 @@ pub fn assign_new_value(new_value: V, id_node: &Node, pos: &Position, context: &
                             match old_head_value {
                                 V::Object(obj) => if let Node(N::ID(field), field_pos) = field_node.as_ref() {
                                     obj.insert(field.clone(), new_value);
-                                    Ok((V::Null, R::None))
+                                    Ok(())
                                 } else {
-                                    Ok((V::Null, R::None))
+                                    Ok(())
                                 }
                                 V::Container(container_context) => if let Node(N::ID(field), field_pos) = field_node.as_ref() {
                                     container_context.set(field, &new_value);
-                                    Ok((V::Null, R::None))
+                                    Ok(())
                                 } else {
-                                    Ok((V::Null, R::None))
+                                    Ok(())
                                 }
                                 _ => {
                                     Err(E::InvalidHead(old_head_value.typ()))
@@ -513,6 +513,66 @@ pub fn assign_new_value(new_value: V, id_node: &Node, pos: &Position, context: &
                     Err(E::CannotAssign(head_node.0.clone()))
                 }
             }
+        Node(N::FieldExpr { head: head_node, expr }, field_pos) => {
+            let (field, _) = interpret(expr, context)?;
+            match head_node.as_ref() {
+                Node(N::ID(head), head_pos) => {
+                    context.trace(head_pos.clone());
+                    let res = match context.get_mut(head) {
+                        Some(old_head_value) => {
+                            match old_head_value {
+                                V::Vector(values, typ) => match field {
+                                    V::Int(index) => if index >= 0 {
+                                        match values.get_mut(index as usize) {
+                                            Some(value) => {
+                                                *value = new_value;
+                                                Ok(())
+                                            }
+                                            None => {
+                                                Err(E::IndexRange(values.len(), index))
+                                            }
+                                        }
+                                    } else if values.len() as i64 - index >= 0 {
+                                        let len = values.len();
+                                        match values.get_mut((len as i64 - index) as usize) {
+                                            Some(value) => {
+                                                *value = new_value;
+                                                Ok(())
+                                            }
+                                            None => {
+                                                Err(E::IndexRange(values.len(), index))
+                                            }
+                                        }
+                                    } else {
+                                        Err(E::IndexRange(values.len(), index))
+                                    }
+                                    _ => {
+                                        Err(E::InvalidField(Type::Vector(Box::new(typ.clone())), field.typ()))
+                                    }
+                                }
+                                _ => {
+                                    Err(E::InvalidHead(old_head_value.typ()))
+                                }
+                            }
+                        }
+                        None => {
+                            context.trace(head_pos.clone());
+                            Err(E::NotDefined(head.clone()))
+                        }
+                    };
+                    if res.is_ok() {
+                        context.pop_trace();
+                    } else {
+                        context.trace(field_pos.clone());
+                    }
+                    res
+                }
+                _ => {
+                    context.trace(head_node.1.clone());
+                    Err(E::CannotAssign(head_node.0.clone()))
+                }
+            }
+        }
         _ => {
             context.trace(pos.clone());
             Err(E::CannotAssign(id_node.0.clone()))
@@ -818,12 +878,40 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                             Err(E::CannotAssign(head_node.0.clone()))
                         }
                     }
+                Node(N::FieldExpr { head: head_node, expr }, field_pos) => {
+                    let (field_value, _) = interpret(expr, context)?;
+                    match head_node.as_ref() {
+                        Node(N::ID(id), id_pos) => {
+                            let (head, _) = interpret(head_node, context)?;
+                            match get_field_value(&head, head_node, field_value, field_pos, field_pos, context) {
+                                Ok(old_value) => match op {
+                                    T::Assign => Ok(value),
+                                    T::AddAssign => binary(&T::Add, &old_value, &value, pos, context),
+                                    T::SubAssign => binary(&T::Sub, &old_value, &value, pos, context),
+                                    T::MulAssign => binary(&T::Mul, &old_value, &value, pos, context),
+                                    T::DivAssign => binary(&T::Div, &old_value, &value, pos, context),
+                                    T::ModAssign => binary(&T::Mod, &old_value, &value, pos, context),
+                                    _ => Ok(old_value.clone())
+                                }
+                                Err(e) => {
+                                    context.trace(id_pos.clone());
+                                    Err(e)
+                                }
+                            }
+                        }
+                        _ => {
+                            context.trace(head_node.1.clone());
+                            Err(E::CannotAssign(head_node.0.clone()))
+                        }
+                    }
+                }
                 _ => {
                     context.trace(pos.clone());
                     Err(E::CannotAssign(id_node.0.clone()))
                 }
             }?;
-            assign_new_value(new_value, id_node, pos, context)
+            assign_new_value(new_value, id_node, pos, context)?;
+            Ok((V::Null, R::None))
         }
         Node(N::Inc(id_node), pos) => {
             let new_value = match id_node.as_ref() {
@@ -857,7 +945,8 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                     Err(E::CannotAssign(id_node.0.clone()))
                 }
             }?;
-            assign_new_value(new_value, id_node, pos, context)
+            assign_new_value(new_value, id_node, pos, context)?;
+            Ok((V::Null, R::None))
         }
         Node(N::Dec(id_node), pos) => {
             let new_value = match id_node.as_ref() {
@@ -891,7 +980,8 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
                     Err(E::CannotAssign(id_node.0.clone()))
                 }
             }?;
-            assign_new_value(new_value, id_node, pos, context)
+            assign_new_value(new_value, id_node, pos, context)?;
+            Ok((V::Null, R::None))
         }
         Node(N::Proc { name: name_node, params: param_nodes, body: body_node }, pos) => {
             if let Node(N::ID(id), name_pos) = name_node.as_ref() {
