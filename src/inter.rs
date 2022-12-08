@@ -402,6 +402,31 @@ pub fn get_field(head: &V, head_node: &Node, field_node: &Node, pos: &Position, 
             context.trace(field_node.1.clone());
             Err(E::InvalidField(head.typ(), field.typ()))
         }
+        V::Type(typ) => if let Node(N::ID(field), field_pos) = field_node {
+            match context.get(&typ.name().to_string()) {
+                Some(type_value) => match type_value {
+                    V::Container(type_context) => match type_context.get(field) {
+                        Some(value) => Ok(value.clone()),
+                        None => {
+                            context.trace(field_pos.clone());
+                            Err(E::FieldNotFound(field.clone()))
+                        }
+                    }
+                    _ => {
+                        context.trace(head_node.1.clone());
+                        Err(E::InvalidHead(head.typ()))
+                    }
+                }
+                None => {
+                    context.trace(head_node.1.clone());
+                    Err(E::NotDefined(typ.name().to_string()))
+                }
+            }
+        } else {
+            let (field, _) = interpret(field_node, context)?;
+            context.trace(field_node.1.clone());
+            Err(E::InvalidField(head.typ(), field.typ()))
+        }
         _ => {
             context.trace(head_node.1.clone());
             Err(E::InvalidHead(head.typ()))

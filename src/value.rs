@@ -10,8 +10,7 @@ pub enum V {
     Wildcard, Null,
     Int(i64), Float(f64), Bool(bool), String(String),
     Tuple(Vec<V>), Vector(Vec<V>, Vec<Type>), Object(HashMap<String, V>), Container(Context),
-    Proc(ProcValueParams, Node),
-    ForeignProc(ProcValueParams, ProcFn),
+    Proc(ProcValueParams, Node), ForeignProc(ProcValueParams, ProcFn),
     Rule(String, String, Rules),
     Type(Type)
 }
@@ -274,6 +273,26 @@ impl Type {
             Self::Vector(types.clone())
         } else {
             Self::Vector(vec![self.clone()])
+        }
+    }
+    pub fn name(&self) -> &str {
+        match self {
+            Self::Any => "any",
+            Self::Undefined => "undefined",
+            Self::Int => "int",
+            Self::Float => "float",
+            Self::Bool => "bool",
+            Self::String => "str",
+            Self::Tuple(_) => "tuple",
+            Self::Vector(_) => "vec",
+            Self::Object => "obj",
+            Self::Container => "container",
+            Self::Proc => "proc",
+            Self::ForeignProc => "foreign_proc",
+            Self::Rule(id) => id.as_str(),
+            Self::Type => "type",
+            Self::Union(_) => "union",
+            Self::Scission(_) => "scission",
         }
     }
 }

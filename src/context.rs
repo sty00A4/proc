@@ -109,13 +109,13 @@ impl Context {
 }
 
 pub fn _print(context: &mut Context, pos: &Position) -> Result<V, E> {
-    let x = context.get(&String::from("x"));
-    if let Some(x) = x { println!("{x}"); }
+    let x = context.get(&String::from("x")).unwrap();
+    if x != &V::Null { println!("{x}"); }
     Ok(V::Null)
 }
 pub fn _input(context: &mut Context, pos: &Position) -> Result<V, E> {
-    let x = context.get(&String::from("x"));
-    if let Some(x) = x {
+    let x = context.get(&String::from("x")).unwrap();
+    if x != &V::Null {
         print!("{x}");
         std::io::stdout().flush();
     }
@@ -129,17 +129,25 @@ pub fn _input(context: &mut Context, pos: &Position) -> Result<V, E> {
     }
 }
 pub fn _assert(context: &mut Context, pos: &Position) -> Result<V, E> {
-    let x = context.get(&String::from("x"));
-    if let Some(x) = x {
-        if V::bool(x) == V::Bool(false) {
-            context.trace(pos.clone());
-            return Err(E::Assertion)
-        }
-    } else {
+    let x = context.get(&String::from("x")).unwrap();
+    if V::bool(x) == V::Bool(false) {
         context.trace(pos.clone());
         return Err(E::Assertion)
     }
     Ok(V::Null)
+}
+pub fn str_join(context: &mut Context, pos: &Position) -> Result<V, E> {
+    let s = context.get(&String::from("self")).unwrap();
+    let list = context.get(&String::from("list")).unwrap();
+    if let V::String(s) = s {
+        if let V::Vector(values, _) = list {
+            Ok(V::String(values.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(s)))
+        } else {
+            Err(E::ExpectedType(Type::Vector(vec![Type::Any]), list.typ()))
+        }
+    } else {
+        Err(E::ExpectedType(Type::String, s.typ()))
+    }
 }
 pub fn fs_read(context: &mut Context, pos: &Position) -> Result<V, E> {
     let path = context.get(&String::from("path"));
@@ -165,6 +173,14 @@ pub fn std_context(context: &mut Context) {
     context.def(&String::from("assert"), &V::ForeignProc(vec![
         ("x".into(), None, false)
     ], _assert));
+    // str
+    let mut str_context = Context::new(&String::from("<STR>"));
+    str_context.def(&String::from("join"), &V::ForeignProc(vec![
+        ("self".into(), Some(type_node(Type::String)), false),
+        ("list".into(), Some(type_node(Type::Vector(vec![Type::Any]))), false)
+    ], str_join));
+    context.def(&String::from("str"), &&V::Container(str_context));
+    // fs
     let mut fs_context = Context::new(&String::from("<FS>"));
     fs_context.def(&String::from("read"), &V::ForeignProc(vec![
         ("path".into(), Some(type_node(Type::String)), false)
