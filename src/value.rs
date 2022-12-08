@@ -9,7 +9,7 @@ pub type Rules = Vec<(Node, Option<Node>)>;
 pub enum V {
     Wildcard, Null,
     Int(i64), Float(f64), Bool(bool), String(String),
-    Tuple(Vec<V>), Vector(Vec<V>, Type), Object(HashMap<String, V>), Container(Context),
+    Tuple(Vec<V>), Vector(Vec<V>, Vec<Type>), Object(HashMap<String, V>), Container(Context),
     Proc(ProcValueParams, Node),
     ForeignProc(ProcValueParams, ProcFn),
     Rule(String, String, Rules),
@@ -139,7 +139,7 @@ impl V {
             Self::Bool(_) => Type::Bool,
             Self::String(_) => Type::String,
             Self::Tuple(v) => Type::Tuple(v.iter().map(|x| x.typ()).collect()),
-            Self::Vector(_, t) => Type::Vector(Box::new(t.clone())),
+            Self::Vector(_, t) => Type::Vector(t.clone()),
             Self::Object(_) => Type::Object,
             Self::Container(_) => Type::Container,
             Self::Proc(_, _) => Type::Proc,
@@ -166,7 +166,7 @@ impl V {
 pub enum Type {
     Any, Undefined,
     Int, Float, Bool, String,
-    Tuple(Vec<Type>), Vector(Box<Type>), Object, Container,
+    Tuple(Vec<Type>), Vector(Vec<Type>), Object, Container,
     Proc, ForeignProc, Rule(String),
     Type,
     Union(Vec<Type>), Scission(Vec<Type>)
@@ -269,6 +269,13 @@ impl Type {
             Type::Scission(_) => None,
         }
     }
+    pub fn vector(&self) -> Self {
+        if let Self::Union(types) = self {
+            Self::Vector(types.clone())
+        } else {
+            Self::Vector(vec![self.clone()])
+        }
+    }
 }
 impl std::fmt::Display for Type {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -285,7 +292,7 @@ impl std::fmt::Debug for Type {
             Self::Bool => write!(f, "bool"),
             Self::String => write!(f, "str"),
             Self::Tuple(types) => write!(f, "({})", types.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(", ")),
-            Self::Vector(t) => write!(f, "vec[{t}]"),
+            Self::Vector(types) => write!(f, "vec[{}]", types.iter().map(|x| x.to_string()).collect::<Vec<String>>().join("|")),
             Self::Object => write!(f, "obj"),
             Self::Container => write!(f, "container"),
             Self::Proc => write!(f, "proc"),
@@ -344,7 +351,15 @@ impl PartialEq for Type {
                 _ => false
             }
             Self::Vector(t1) => match other {
-                Self::Vector(t2) => t1.as_ref() == t2.as_ref(),
+                Self::Vector(t2) => {
+                    for type1 in t1.iter() {
+                        if !t2.contains(type1) { return false }
+                    }
+                    for type2 in t2.iter() {
+                        if !t1.contains(type2) { return false }
+                    }
+                    true
+                }
                 Self::Any => true,
                 Self::Union(_) => other == self,
                 Self::Scission(_) => other == self,

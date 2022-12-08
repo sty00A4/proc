@@ -121,6 +121,8 @@ mod tests {
         assert!(Type::Int == Type::Scission(vec![Type::String]));
         assert!(Type::Int != Type::Scission(vec![Type::Int, Type::Float]));
         assert!(Type::Scission(vec![Type::Int, Type::Float]) != Type::Int);
+        assert!(Type::Vector(vec![Type::Int]) == Type::Vector(vec![Type::Int]));
+        assert!(Type::Vector(vec![Type::Int, Type::Float]) == Type::Vector(vec![Type::Float, Type::Int]));
     }
     #[test]
     fn samples_numbers() -> Result<(), E> {

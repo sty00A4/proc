@@ -366,7 +366,7 @@ pub fn lex(path: &String, text: &String, context: &mut Context) -> Result<Vec<Ve
                             "bool" => T::Type(Type::Bool),
                             "str" => T::Type(Type::String),
                             "tuple" => T::Type(Type::Tuple(vec![])),
-                            "vec" => T::Type(Type::Vector(Box::new(Type::Any))),
+                            "vec" => T::Type(Type::Vector(vec![Type::Any])),
                             "obj" => T::Type(Type::Object),
                             "type" => T::Type(Type::Type),
                             "union" => T::Type(Type::Union(vec![Type::Any])),

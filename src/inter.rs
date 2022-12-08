@@ -466,7 +466,7 @@ pub fn get_field_value(head: &V, head_node: &Node, field: V, field_pos: &Positio
         }
         V::Type(head_type) => match field {
             V::Type(typ) => match head_type {
-                Type::Vector(_) => Ok(V::Type(Type::Vector(Box::new(typ)))),
+                Type::Vector(_) => Ok(V::Type(typ.vector())),
                 _ => {
                     context.trace(field_pos.clone());
                     Err(E::InvalidField(head_type.clone(), typ))
@@ -560,7 +560,7 @@ pub fn assign_new_value(new_value: V, id_node: &Node, pos: &Position, context: &
                                         Err(E::IndexRange(values.len(), index))
                                     }
                                     _ => {
-                                        Err(E::InvalidField(Type::Vector(Box::new(typ.clone())), field.typ()))
+                                        Err(E::InvalidField(Type::Vector(typ.clone()), field.typ()))
                                     }
                                 }
                                 _ => {
@@ -617,10 +617,10 @@ pub fn interpret(input_node: &Node, context: &mut Context) -> Result<(V, R), E> 
             let mut types: Vec<Type> = vec![];
             for n in nodes.iter() {
                 let (v, _) = interpret(n, context)?;
-                types.push(v.typ());
+                if !types.contains(&v.typ()) { types.push(v.typ()); }
                 values.push(v);
             }
-            Ok((V::Vector(values, Type::create_union(types)), R::None))
+            Ok((V::Vector(values, types), R::None))
         }
         Node(N::Tuple(nodes), _) => {
             let mut values: Vec<V> = vec![];
