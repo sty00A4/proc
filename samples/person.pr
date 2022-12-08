@@ -10,12 +10,6 @@ proc employed <- person: obj
 proc say_job <- person: obj
     print! "I work as a " + person.job if employed(person) else "I'm currently unemployed"
 
-
-var name = input("name: ")
-var age = count(input("age: "))
-var job = input("job: ")
-if #job == 0
-    job = null
-var person = Person(name, age, job)
+var person = Person("sty", 18)
 greet! person
 say_job! person

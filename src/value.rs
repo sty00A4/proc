@@ -285,14 +285,14 @@ impl std::fmt::Debug for Type {
             Self::Bool => write!(f, "bool"),
             Self::String => write!(f, "str"),
             Self::Tuple(types) => write!(f, "({})", types.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(", ")),
-            Self::Vector(t) => write!(f, "vec<{t}>"),
+            Self::Vector(t) => write!(f, "vec[{t}]"),
             Self::Object => write!(f, "obj"),
             Self::Container => write!(f, "container"),
             Self::Proc => write!(f, "proc"),
             Self::ForeignProc => write!(f, "foreign-proc"),
             Self::Rule(name) => write!(f, "{name}-rule"),
             Self::Type => write!(f, "type"),
-            Self::Union(types) => write!(f, "union[{}]", types.iter().map(|x| x.to_string()).collect::<Vec<String>>().join("|")),
+            Self::Union(types) => write!(f, "{}", types.iter().map(|x| x.to_string()).collect::<Vec<String>>().join("|")),
             Self::Scission(types) => write!(f, "scission[{}]", types.iter().map(|x| x.to_string()).collect::<Vec<String>>().join("|")),
         }
     }

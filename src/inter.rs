@@ -464,6 +464,19 @@ pub fn get_field_value(head: &V, head_node: &Node, field: V, field_pos: &Positio
                 Err(E::InvalidField(head.typ(), field.typ()))
             }
         }
+        V::Type(head_type) => match field {
+            V::Type(typ) => match head_type {
+                Type::Vector(_) => Ok(V::Type(Type::Vector(Box::new(typ)))),
+                _ => {
+                    context.trace(field_pos.clone());
+                    Err(E::InvalidField(head_type.clone(), typ))
+                }
+            }
+            _ => {
+                context.trace(field_pos.clone());
+                Err(E::ExpectedType(Type::Type, field.typ()))
+            }
+        }
         _ => {
             context.trace(head_node.1.clone());
             Err(E::InvalidHead(head.typ()))
