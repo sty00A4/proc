@@ -68,7 +68,7 @@ Even though the language is already functional, it is far from being where I wan
 *If anyone wants to help with the language, [contact](#contact) me :)*
 
 ### Language relevant
-- *none*
+- Self procedures for vector operations (`vec.push`, `vec.pop`, `vec.clear`, ...)
 ### Planned Features
 - String creation alternatives
 - Lambda Functions `x -> x * 2`
