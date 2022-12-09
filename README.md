@@ -9,7 +9,7 @@ An interpreted programming language, implementing the concepts of rules and cont
   - [Rules](#rules)
   - [Container](#container)
 - [To-Do](#to-do)
-    - [Language relevant](#language-relevant)
+    - [Soon Features](#soon-features)
     - [Planned Features](#planned-features)
     - [Other](#other)
 - [Contact](#contact)
@@ -67,12 +67,12 @@ A container called `math` containing the global type `number`, the variable `pi`
 Even though the language is already functional, it is far from being where I want it. So here are some To-Dos. 
 *If anyone wants to help with the language, [contact](#contact) me :)*
 
-### Language relevant
+### Soon Features
 - Self procedures for vector operations (`vec.push`, `vec.pop`, `vec.clear`, ...)
+- Arguement collector `proc test <- ...`
 ### Planned Features
 - String creation alternatives
 - Lambda Functions `x -> x * 2`
-- Arguement collector `proc test <- ...`
 - Error handeling
     - error value type
     - `throw` statement
@@ -87,7 +87,6 @@ Even though the language is already functional, it is far from being where I wan
         - `count`, *int* bigger than `0`
     - io
         - `stdin`, `stdout`, `stderr` ?
-        - `read <- file: file_obj`
         - `write <- file: file_obj, text: str`
     - http
         - `get <- url: str`
